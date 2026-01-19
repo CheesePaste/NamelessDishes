@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[46,)"
+license="MIT"
+
+[[mods]]
+modId="namelessdishes"
+version="${mod_version}"
+displayName="Nameless Dishes"
+description="A flexible cooking framework for dynamic recipe creation"
+authors="CheesePaste"
+
+[[dependencies.namelessdishes]]
+modId="forge"
+versionRange="[47.1.0,)"
+mandatory=true
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.namelessdishes]]
+modId="minecraft"
+versionRange="[1.20.1,1.21)"
+mandatory=true
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.namelessdishes]]
+modId="farmersdelight"
+mandatory=true
+versionRange="[0,)"
+ordering="AFTER"
+side="BOTH"

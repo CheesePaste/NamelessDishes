@@ -1,0 +1,227 @@
+# NamelessDishes 项目文档
+
+## 项目概述
+
+**NamelessDishes** 是一个Minecraft 1.20.1 Forge模组，提供灵活的烹饪框架，允许玩家在没有固定配方的情况下制作无名料理。该框架通过动态兼容各种烹饪模组，实现基于原料的饱食度和饱和度计算，并为后续的食物相性和自定义Buff系统提供扩展支持。
+
+## 项目状态
+
+当前版本：**v1.0.0 (框架版)**
+
+## 项目结构
+
+```
+com.cp.nd/
+├── NamelessDishes.java                    # 主类
+├── config/
+│   ├── NDConfig.java                      # 主配置文件
+│   └── CompatibilityConfig.java           # 兼容性配置
+├── compatibility/
+│   ├── ModCompatibilityManager.java       # 兼容性管理器
+│   ├── base/
+│   │   └── BaseCookingHandler.java        # 基础处理器
+│   └── handlers/                          # 模组特定处理器（空文件夹）
+├── api/
+│   ├── ICookingRecipeHandler.java         # 处理器接口
+│   └── ICookingStation.java               # 烹饪站接口
+└── util/
+    └── ModDetectionUtil.java              # 模组检测工具
+```
+
+## 已实现功能
+
+### 1. 核心框架 ✅
+- **模组基础结构**：完整的Forge模组初始化流程
+- **日志系统**：使用Log4j进行日志记录
+- **事件总线**：正确的事件注册和处理器
+
+### 2. 配置系统 ✅
+- **主配置文件** (`namelessdishes-common.toml`)
+  - 通用设置：框架开关、调试模式、启用模组列表
+  - 无名料理设置：饱食度乘数、饱和度乘数、食材数量限制
+  - 模组特定设置：各模组的烹饪方块列表
+- **动态配置**：支持热重载，配置更改无需重启游戏
+- **配置验证**：检查方块ID格式的有效性
+
+### 3. 模组兼容性框架 ✅
+- **自动检测**：自动检测已安装的烹饪模组
+- **处理器系统**：每个兼容模组可拥有独立的处理器
+- **动态启用**：通过配置文件控制模组兼容性的启用/禁用
+- **基础处理器**：提供默认的处理器实现
+
+### 4. API接口系统 ✅
+- **ICookingRecipeHandler**：烹饪配方处理器接口
+- **ICookingStation**：烹饪站接口
+- **易于扩展**：清晰的API设计便于添加新功能
+
+### 5. 模组检测系统 ✅
+- **预定义列表**：包含20+常见烹饪模组的检测
+- **版本信息**：可获取模组名称和版本号
+- **缓存机制**：提高检测效率
+
+### 6. 构建系统 ✅
+- **Gradle配置**：完整的构建脚本
+- **开发环境**：支持客户端、服务器和数据生成运行配置
+- **依赖管理**：支持可选依赖和运行时依赖
+
+## 未实现功能
+
+### 1. 核心功能 ❌
+- **无名料理物品**：尚未创建实际的"无名料理"物品
+- **食物属性**：没有实现饱食度、饱和度等食物属性系统
+- **物品模型/材质**：缺少物品的模型和纹理
+
+### 2. 事件处理系统 ❌
+- **烹饪事件监听**：没有监听各模组的烹饪事件
+- **合成检测**：未实现合成台的无名料理检测
+- **GUI集成**：没有与各模组GUI的集成
+
+### 3. 具体模组处理器 ❌
+- **FarmersDelightHandler**：农夫乐事模组的处理器
+
+### 4. 配方管理系统 ❌
+- **配方检测**：没有检测现有配方的机制
+- **无名配方生成**：未实现动态配方生成
+- **配方缓存**：没有缓存已创建的无名料理
+
+### 5. 食物效果系统 ❌
+- **Buff/DeBuff**：没有实现食物相性和自定义效果
+- **状态效果**：没有基于食材的类型附加状态效果
+- **NBT数据**：没有为无名料理添加自定义NBT数据
+
+### 6. 高级功能 ❌
+- **食物相性系统**：食材组合的特殊效果
+- **烹饪技能系统**：熟练度影响料理质量
+- **食谱书集成**：无名料理的记录和学习
+- **本地化系统**：多语言支持不完整
+
+## 配置说明
+
+### 配置文件位置
+```
+.minecraft/config/namelessdishes-common.toml
+```
+
+### 主要配置项
+
+```toml
+# 通用设置
+[general]
+enableFramework = true        # 启用框架
+debugMode = false            # 调试模式
+enabledMods = ["farmersdelight", "cookingforblockheads"]  # 启用的模组
+cookingBlocks = []           # 通用烹饪方块列表
+
+# 无名料理设置
+[nameless_dishes]
+baseSaturationMultiplier = 0.6    # 饱和度乘数
+baseHungerMultiplier = 80         # 饥饿值乘数（百分比）
+requireCooking = true             # 是否需要烹饪
+minIngredients = 1                # 最少食材数
+maxIngredients = 9                # 最多食材数
+
+# 模组特定设置
+[mod_specific.farmersdelight]
+farmersDelightBlocks = ["farmersdelight:cooking_pot", "farmersdelight:skillet"]
+
+[mod_specific.cookingforblockheads]
+cookingForBlockheadsBlocks = ["cookingforblockheads:cooking_table", "cookingforblockheads:oven"]
+```
+
+## 使用方法
+
+### 1. 安装和运行
+1. 将模组放入mods文件夹
+2. 启动游戏
+3. 检查日志确认框架初始化成功
+
+### 2. 添加新的模组兼容
+1. 在 `CompatibilityConfig.java` 的静态块中注册模组
+2. 创建对应的处理器类（继承 `BaseCookingHandler`）
+3. 在配置文件中添加模组特定设置
+
+### 3. 示例：添加农夫乐事处理器
+```java
+package com.cp.nd.compatibility.handlers;
+
+import com.cp.nd.api.ICookingRecipeHandler;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import vectorwing.farmersdelight.common.block.entity.CookingPotBlockEntity;
+
+public class FarmersDelightHandler implements ICookingRecipeHandler {
+    @Override
+    public String getModId() {
+        return "farmersdelight";
+    }
+    
+    @Override
+    public boolean isSupportedBlock(BlockEntity blockEntity) {
+        return blockEntity instanceof CookingPotBlockEntity;
+    }
+    
+    // 其他方法实现...
+}
+```
+
+## 扩展指南
+
+### 1. 实现无名料理物品
+```java
+public class NamelessDishItem extends Item {
+    // 实现自定义食物属性
+    // 包含饱食度、饱和度、特殊效果等
+}
+```
+
+### 2. 实现事件监听
+```java
+@SubscribeEvent
+public void onCookingEvent(SomeCookingEvent event) {
+    // 检测是否是无名料理
+    // 调用对应的处理器
+}
+```
+
+### 3. 实现配方检测
+```java
+public boolean hasExistingRecipe(Level level, BlockEntity blockEntity, List<ItemStack> inputs) {
+    // 检查当前输入是否有已知配方
+    // 如果没有，则允许创建无名料理
+}
+```
+
+## 技术说明
+
+### 1. 设计理念
+- **模块化**：每个模组有独立的处理器
+- **可配置**：所有功能都可通过配置文件控制
+- **向后兼容**：框架本身不影响原版功能
+- **易于扩展**：清晰的API接口
+
+###2. 兼容性策略
+- **软依赖**：所有烹饪模组都是可选依赖
+- **条件注册**：根据模组是否加载动态注册功能
+- **版本适配**：通过配置文件适配不同版本
+
+## 开发计划
+
+### 短期目标 (v1.1.0)
+1. 实现基础无名料理物品
+2. 添加农夫乐事处理器
+3. 实现基本的烹饪事件监听
+
+### 中期目标 (v1.2.0)
+1. 完善所有主流烹饪模组的兼容
+2. 实现食物相性系统基础
+3. 添加配方缓存机制
+
+### 长期目标 (v1.3.0+)
+1. 完整的食物效果系统
+2. 封锁配方，玩家自己用料理解锁
+
+## 许可证
+本项目采用MIT许可证。详见LICENSE文件。
+
+---
+
+**注意**：当前版本仅为框架，不具备实际游戏功能。需要后续开发实现具体的无名料理系统和模组兼容处理器。
