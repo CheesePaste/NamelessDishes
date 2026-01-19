@@ -48,7 +48,7 @@ dependencies {
     implementation    "io.github.llamalad7:mixinextras-forge:0.4.1"
     jarJar            "io.github.llamalad7:mixinextras-forge:[0.4.1,)"
 
-    implementation fg.deobf("curse.maven:farmers-delight-398521:6597298")
+    implementation fg.deobf("curse.maven:farmers-delight-398521:4679319")
 }
 
 

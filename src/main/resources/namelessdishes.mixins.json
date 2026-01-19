@@ -5,6 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "plugin": "com.cp.nd.mixin.MixinGate",
   "mixins": [
+    "fd.CookingPotBlockEntityAccessor",
+    "fd.CookingPotBlockEntityMixin"
   ],
   "client": [
   ],

@@ -1,0 +1,113 @@
+package com.cp.nd.mixin.fd;
+
+import com.cp.nd.NamelessDishes;
+import com.cp.nd.api.ICookingRecipeHandler;
+import com.cp.nd.compatibility.ModCompatibilityManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import vectorwing.farmersdelight.common.block.entity.CookingPotBlockEntity;
+import vectorwing.farmersdelight.common.crafting.CookingPotRecipe;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Mixin(CookingPotBlockEntity.class)
+public abstract class CookingPotBlockEntityMixin {
+    @Unique
+    private static int cooktime=100;
+
+    @Inject(
+            method = "cookingTick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lvectorwing/farmersdelight/common/block/entity/CookingPotBlockEntity;)V",
+            at = @At("HEAD"),
+            cancellable = true,remap = false
+    )
+    private static void onCookingTick(Level level, BlockPos pos, BlockState state,
+                                      CookingPotBlockEntity cookingPot, CallbackInfo ci) {
+        if (level.isClientSide()) {
+            return;
+        }
+
+        // 通过访问器调用私有方法
+        CookingPotBlockEntityAccessor accessor = (CookingPotBlockEntityAccessor) cookingPot;
+
+        // 检查是否被加热且有输入
+        if (!cookingPot.isHeated(level, pos) || !accessor.farmersdelight$hasInput()) {
+            return;
+        }
+
+        // 先检查是否有原版配方
+        Optional<CookingPotRecipe> recipe = accessor.farmersdelight$getMatchingRecipe(
+                new net.minecraftforge.items.wrapper.RecipeWrapper(accessor.farmersdelight$getInventory())
+        );
+
+        if (recipe.isPresent()) {
+            return; // 有原版配方，让原版逻辑处理
+        }
+
+        // 获取农夫乐事处理器
+        ICookingRecipeHandler handler = ModCompatibilityManager.getInstance().getHandlerForMod("farmersdelight");
+        if (!(handler instanceof com.cp.nd.compatibility.fd.FarmersDelightHandler farmersDelightHandler)) {
+            return;
+        }
+
+        // 获取当前输入物品
+        List<ItemStack> inputs = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            ItemStack stack = accessor.farmersdelight$getInventory().getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                inputs.add(stack.copy());
+            }
+        }
+
+        // 检查是否允许创建无名料理
+        if (!handler.allowNamelessCrafting(level, cookingPot, inputs)) {
+            return;
+        }
+        ci.cancel();
+
+        // 创建无名料理
+        ItemStack namelessResult = handler.createNamelessResult(level, cookingPot, inputs);
+        if (namelessResult.isEmpty()) {
+            return;
+        }
+        accessor.farmersdelight$setCookTimeTotal(cooktime*inputs.size());
+        accessor.farmersdelight$setCookTime(accessor.farmersdelight$getCookTime()+1);
+        boolean didInventoryChange=false;
+        if(accessor.farmersdelight$getCookTime()> accessor.farmersdelight$getCookTimeTotal())
+        {
+            boolean success = handler.executeCooking(level, cookingPot, inputs, namelessResult);
+            if(success) {
+                accessor.farmersdelight$setCookTime(0);
+                accessor.farmersdelight$setCookTimeTotal(0);
+                NamelessDishes.LOGGER.debug("Created nameless dish in FarmersDelight cooking pot at {}", pos);
+            }
+            didInventoryChange=true;
+        }
+        ItemStack mealStack = cookingPot.getMeal();
+        if (!mealStack.isEmpty()) {
+            if (!accessor.farmersdelight$doesMealHaveContainer(mealStack)) {
+                accessor.farmersdelight$moveMealToOutput();
+                didInventoryChange = true;
+            } else if (!accessor.farmersdelight$getInventory().getStackInSlot(7).isEmpty()) {
+                accessor.farmersdelight$useStoredContainerOnMeal();
+                didInventoryChange = true;
+            }
+        }
+
+        if (didInventoryChange) {
+            cookingPot.setChanged();
+            level.sendBlockUpdated(pos, state, state, 3);
+        }
+
+    }
+}
