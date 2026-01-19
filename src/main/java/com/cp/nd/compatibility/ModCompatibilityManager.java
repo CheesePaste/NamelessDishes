@@ -11,6 +11,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+//这个类完全由AI生成，没有人为检验过代码是否符合预期
 public class ModCompatibilityManager {
     private static ModCompatibilityManager instance;
 

@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import javax.annotation.Nullable;
 import java.util.List;
 
+//这个类完全由AI生成，没有人为检验过代码是否符合预期
 public class BaseCookingHandler implements ICookingRecipeHandler {
 
     @Override

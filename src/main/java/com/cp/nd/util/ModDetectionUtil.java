@@ -6,6 +6,7 @@ import net.minecraftforge.forgespi.language.IModInfo;
 import java.util.*;
 import java.util.stream.Collectors;
 
+//这个类完全由AI生成，没有人为检验过代码是否符合预期
 public class ModDetectionUtil {
     private static final Map<String, Boolean> modCache = new HashMap<>();
     private static final Set<String> cookingMods = new HashSet<>(Arrays.asList(

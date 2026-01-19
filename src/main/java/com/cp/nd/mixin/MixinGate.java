@@ -6,6 +6,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import java.util.List;
 import java.util.Set;
 
+//这个类完全照抄其他模组，没有检验
 public final class MixinGate implements IMixinConfigPlugin {
     private static boolean isDataGen() {
         return "true".equalsIgnoreCase(System.getProperty("nameless_dishes.datagen"))

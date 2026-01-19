@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+//这个类完全由AI生成，没有人为检验过代码是否符合预期
 public class NDConfig {
     public static final ForgeConfigSpec SPEC;
     public static final NDConfig INSTANCE;

@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+
+//这个类完全由AI生成，没有人为检验过代码是否符合预期
 public class CompatibilityConfig {
     private static final Map<String, ModCompatibility> modCompatibilityMap = new HashMap<>();
 
