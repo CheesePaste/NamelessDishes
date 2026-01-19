@@ -8,7 +8,7 @@ import java.util.Set;
 
 public final class MixinGate implements IMixinConfigPlugin {
     private static boolean isDataGen() {
-        return "true".equalsIgnoreCase(System.getProperty("namelessdishes.datagen"))
+        return "true".equalsIgnoreCase(System.getProperty("nameless_dishes.datagen"))
                 || "true".equalsIgnoreCase(System.getProperty("forge.datagen"));
     }
     @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {

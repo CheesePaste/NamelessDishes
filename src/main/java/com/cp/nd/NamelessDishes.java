@@ -20,6 +20,8 @@ public class NamelessDishes {
 
     private static ModCompatibilityManager compatibilityManager;
 
+    //这里有两个get从1.21.1开始弃用，1.20.1可以正常使用，但是因为警告每次运行都会拉到这个类，所以我先SuppressWarning了
+    @SuppressWarnings("all")
     public NamelessDishes() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
