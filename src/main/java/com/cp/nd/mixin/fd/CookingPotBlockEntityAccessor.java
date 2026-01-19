@@ -11,6 +11,7 @@ import vectorwing.farmersdelight.common.crafting.CookingPotRecipe;
 
 import java.util.Optional;
 
+//注意，mixin一定要加入remap=false
 @Mixin(CookingPotBlockEntity.class)
 public interface CookingPotBlockEntityAccessor {
     @Accessor(value = "inventory",remap = false)

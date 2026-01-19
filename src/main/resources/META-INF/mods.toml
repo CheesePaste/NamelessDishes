@@ -3,27 +3,27 @@ loaderVersion="[46,)"
 license="MIT"
 
 [[mods]]
-modId="namelessdishes"
+modId="nameless_dishes"
 version="${mod_version}"
 displayName="Nameless Dishes"
 description="A flexible cooking framework for dynamic recipe creation"
 authors="CheesePaste"
 
-[[dependencies.namelessdishes]]
+[[dependencies.nameless_dishes]]
 modId="forge"
 versionRange="[47.1.0,)"
 mandatory=true
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.namelessdishes]]
+[[dependencies.nameless_dishes]]
 modId="minecraft"
 versionRange="[1.20.1,1.21)"
 mandatory=true
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.namelessdishes]]
+[[dependencies.nameless_dishes]]
 modId="farmersdelight"
 mandatory=true
 versionRange="[0,)"

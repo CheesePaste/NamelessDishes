@@ -4,10 +4,13 @@ import com.cp.nd.NamelessDishes;
 import com.cp.nd.api.ICookingRecipeHandler;
 import com.cp.nd.api.ICookingStation;
 import com.cp.nd.config.NDConfig;
+import com.cp.nd.item.AbstractNamelessDishItem;
+import com.cp.nd.item.ModItems;
 import com.cp.nd.mixin.fd.CookingPotBlockEntityAccessor;
 import com.cp.nd.util.ModDetectionUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Recipe;
@@ -57,6 +60,7 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
                 stack.is(Items.BUCKET);
     }
 
+    /// 获得配方
     @Nullable
     @Override
     public Recipe<?> getExistingRecipe(Level level, BlockEntity blockEntity, List<ItemStack> inputs) {
@@ -78,6 +82,7 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
             return null;
         }
     }
+    /// 检测配置是否允许无名料理合成
 
     @Override
     public boolean allowNamelessCrafting(Level level, BlockEntity blockEntity, List<ItemStack> inputs) {
@@ -108,18 +113,6 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
                 return false;
             }
         }
-/*
-        // 检查是否已经有完成的料理在显示槽或输出槽
-        ItemStack existingMeal = cookingPot.getInventory().getStackInSlot(MEAL_DISPLAY_SLOT);
-        ItemStack existingOutput = cookingPot.getInventory().getStackInSlot(OUTPUT_SLOT);
-        if (!existingMeal.isEmpty() || !existingOutput.isEmpty()) {
-            return false;
-        }
-
-        ItemStack containerStack = cookingPot.getInventory().getStackInSlot(CONTAINER_SLOT);
-        if (containerStack.isEmpty() || !isCookingContainer(containerStack)) {
-            return false;
-        }*/
 
         // 检查是否有有效的输入
         boolean hasInput = false;
@@ -129,6 +122,8 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
                 break;
             }
         }
+
+        //判断原版配方政治1合成逻辑已挪入对应mixin
         /*try {
             Optional<CookingPotRecipe> existingRecipe = cookingPot.getLevel().getRecipeManager()
                     .getRecipeFor(ModRecipeTypes.COOKING.get(),
@@ -150,28 +145,29 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
         return hasInput;
     }
 
+    /// 生成无名料理，这个类负责无名料理属性和原料等信息的搭建
     @Nonnull
     @Override
     public ItemStack createNamelessResult(Level level, BlockEntity blockEntity, List<ItemStack> inputs) {
-        if (!(blockEntity instanceof CookingPotBlockEntity)) {
-            return ItemStack.EMPTY;
-        }
 
         // 计算饱食度和饱和度
         float totalHunger = 0;
         float totalSaturation = 0;
-        List<String> ingredientTypes = new ArrayList<>();
+        List<ItemStack> ingredientTypes = new ArrayList<>();
 
         for (ItemStack input : inputs) {
             if (!input.isEmpty()) {
                 // 获取食物属性（如果有）
                 if (input.isEdible()) {
-                    totalHunger += input.getItem().getFoodProperties().getNutrition();
-                    totalSaturation += input.getItem().getFoodProperties().getSaturationModifier();
+                    FoodProperties foodProperties = input.getFoodProperties(null);
+                    if (foodProperties != null) {
+                        totalHunger += foodProperties.getNutrition();
+                        totalSaturation += foodProperties.getSaturationModifier();
+                    }
                 }
 
                 // 记录食材类型用于效果计算
-                ingredientTypes.add(input.getItem().toString());
+                ingredientTypes.add(input);
             }
         }
 
@@ -181,27 +177,21 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
         double baseSaturation = (totalSaturation * NDConfig.INSTANCE.baseSaturationMultiplier.get());
 
 
-        // 创建无名料理物品
-        // 这里应该使用你的自定义物品，暂时用烤土豆作为占位符
-        ItemStack result = createNamelessItemStack(baseHunger, baseSaturation, ingredientTypes);
-
-        return result;
+        return createNamelessItemStack(baseHunger, baseSaturation, ingredientTypes);
     }
 
-    private ItemStack createNamelessItemStack(double hunger, double saturation, List<String> ingredients) {
-        // TODO: 这里应该创建自定义的无名料理物品
-        // 暂时使用一个简单的食物作为占位符
-        ItemStack result = new ItemStack(Items.BAKED_POTATO);
+    /// 创建无名料理物品
+    private ItemStack createNamelessItemStack(double hunger, double saturation, List<ItemStack> ingredients) {
+        ItemStack result = AbstractNamelessDishItem.createDish(
+                ModItems.NAMELESS_DISH_WITH_BOWL.get(),
+                (int) hunger, (float) saturation, ingredients, true);
 
-        // 设置自定义NBT标签
-        result.getOrCreateTag().putFloat("NamelessHunger", (float) hunger);
-        result.getOrCreateTag().putFloat("NamelessSaturation", (float) saturation);
-        result.getOrCreateTag().putString("NamelessIngredients", String.join(",", ingredients));
         result.getOrCreateTag().putBoolean("IsNamelessDish", true);
 
         return result;
     }
 
+    /// 进行烹饪操作。这个类负责生成无名料理，放入显示槽（提示“需要碗”的槽），显示槽消耗碗进入输出槽的逻辑在对应mixin
     @Override
     public boolean executeCooking(Level level, BlockEntity blockEntity, List<ItemStack> inputs, ItemStack result) {
         if (!(blockEntity instanceof CookingPotBlockEntity cookingPot) || result.isEmpty()) {
@@ -210,9 +200,7 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
 
         try {
 
-            // 获取显示槽和输出槽
             ItemStack displaySlot = cookingPot.getInventory().getStackInSlot(MEAL_DISPLAY_SLOT);
-            ItemStack outputSlot = cookingPot.getInventory().getStackInSlot(OUTPUT_SLOT);
 
             // 生成最终的无名料理（设置为1个）
             ItemStack finalResult = result.copy();
@@ -290,7 +278,7 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
         }
     }
 
-    // 辅助方法：处理剩余物品
+    /// 辅助方法：处理剩余物品
     private void handleRemainingItem(Level level, CookingPotBlockEntity cookingPot, ItemStack remainder) {
         if (level == null || remainder.isEmpty()) {
             return;
@@ -309,7 +297,7 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
         // 否则弹出
         ejectRemainingItem(level, cookingPot, remainder);
     }
-
+    /// 弹出物品，因为懒得翻了，所以没有用农夫乐事原版弹出逻辑而是弹出到上面
     private void ejectRemainingItem(Level level, CookingPotBlockEntity cookingPot, ItemStack remainder) {
         if (level == null || remainder.isEmpty() || level.isClientSide()) {
             return;
@@ -337,7 +325,7 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
         return new FarmersDelightCookingStation(cookingPot);
     }
 
-    // 辅助方法
+    /// 辅助方法
 
     private int getIngredientCount(List<ItemStack> inputs) {
         int count = 0;
@@ -349,59 +337,9 @@ public class FarmersDelightHandler implements ICookingRecipeHandler {
         return count;
     }
 
-    // 反射方法获取和设置私有字段
 
-    private void initializeReflectionFields() {
-        if (!fieldsInitialized) {
-            try {
-                cookTimeField = CookingPotBlockEntity.class.getDeclaredField("cookTime");
-                cookTimeField.setAccessible(true);
 
-                cookTimeTotalField = CookingPotBlockEntity.class.getDeclaredField("cookTimeTotal");
-                cookTimeTotalField.setAccessible(true);
-
-                fieldsInitialized = true;
-            } catch (Exception e) {
-                com.cp.nd.NamelessDishes.LOGGER.error("Failed to initialize reflection fields for CookingPotBlockEntity", e);
-            }
-        }
-    }
-
-    private int getCookTime(CookingPotBlockEntity cookingPot) {
-        initializeReflectionFields();
-        if (cookTimeField != null) {
-            try {
-                return cookTimeField.getInt(cookingPot);
-            } catch (Exception e) {
-                // 忽略错误
-            }
-        }
-        return 0;
-    }
-
-    private void setCookTime(CookingPotBlockEntity cookingPot, int time) {
-        initializeReflectionFields();
-        if (cookTimeField != null) {
-            try {
-                cookTimeField.setInt(cookingPot, time);
-            } catch (Exception e) {
-                // 忽略错误
-            }
-        }
-    }
-
-    private void setCookTimeTotal(CookingPotBlockEntity cookingPot, int time) {
-        initializeReflectionFields();
-        if (cookTimeTotalField != null) {
-            try {
-                cookTimeTotalField.setInt(cookingPot, time);
-            } catch (Exception e) {
-                // 忽略错误
-            }
-        }
-    }
-
-    // 农夫乐事烹饪站适配器
+    /// 农夫乐事烹饪站适配器，基本没用，以后这块可以删了
     private static class FarmersDelightCookingStation implements ICookingStation {
         private final CookingPotBlockEntity cookingPot;
 

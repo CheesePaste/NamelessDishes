@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+//注意，mixin一定要加入remap=false
 @Mixin(CookingPotBlockEntity.class)
 public abstract class CookingPotBlockEntityMixin {
     @Unique
@@ -75,16 +76,18 @@ public abstract class CookingPotBlockEntityMixin {
         }
         ci.cancel();
 
-        // 创建无名料理
-        ItemStack namelessResult = handler.createNamelessResult(level, cookingPot, inputs);
-        if (namelessResult.isEmpty()) {
-            return;
-        }
         accessor.farmersdelight$setCookTimeTotal(cooktime*inputs.size());
         accessor.farmersdelight$setCookTime(accessor.farmersdelight$getCookTime()+1);
         boolean didInventoryChange=false;
         if(accessor.farmersdelight$getCookTime()> accessor.farmersdelight$getCookTimeTotal())
         {
+            // 创建无名料理
+            ItemStack namelessResult = handler.createNamelessResult(level, cookingPot, inputs);
+            if (namelessResult.isEmpty()) {
+                //这个if里面基本不可能触发，不用考虑是这里卡住
+                return;
+            }
+            //executeCooking负责在展示槽生成无名料理，展示槽是“需要碗”提示的那个槽
             boolean success = handler.executeCooking(level, cookingPot, inputs, namelessResult);
             if(success) {
                 accessor.farmersdelight$setCookTime(0);
@@ -93,6 +96,8 @@ public abstract class CookingPotBlockEntityMixin {
             }
             didInventoryChange=true;
         }
+
+        //这里是将展示槽的物品挪入输出槽，在展示槽创建无名料理使用handler的execute'Cooking实现
         ItemStack mealStack = cookingPot.getMeal();
         if (!mealStack.isEmpty()) {
             if (!accessor.farmersdelight$doesMealHaveContainer(mealStack)) {
@@ -104,6 +109,7 @@ public abstract class CookingPotBlockEntityMixin {
             }
         }
 
+        //照搬农夫乐事原版的背包刷新，避免吞产物
         if (didInventoryChange) {
             cookingPot.setChanged();
             level.sendBlockUpdated(pos, state, state, 3);

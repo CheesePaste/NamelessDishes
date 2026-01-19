@@ -2,6 +2,7 @@ package com.cp.nd;
 
 import com.cp.nd.config.NDConfig;
 import com.cp.nd.compatibility.ModCompatibilityManager;
+import com.cp.nd.item.ModItems;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -12,9 +13,9 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod(NamelessDishes.MODID)
+@Mod(NamelessDishes.MOD_ID)
 public class NamelessDishes {
-    public static final String MODID = "namelessdishes";
+    public static final String MOD_ID = "nameless_dishes";
     public static final Logger LOGGER = LogManager.getLogger();
 
     private static ModCompatibilityManager compatibilityManager;
@@ -30,6 +31,8 @@ public class NamelessDishes {
 
         // 注册Forge事件总线
         MinecraftForge.EVENT_BUS.register(this);
+
+        ModItems.register(modEventBus);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
