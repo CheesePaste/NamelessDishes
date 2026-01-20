@@ -9,7 +9,8 @@ import java.util.Set;
 /**
  * 无名料理配方注册器接口
  * 详见CookingPotRecipeRegister和RecipeRegisterManager
- * 需要每次游戏启动使用RecipeRegisterManager.registerRecipeRegisterDynamic()传入，来发挥作用
+ * 如果是外部模组兼容，需要每次游戏启动使用RecipeRegisterManager.registerRecipeRegisterDynamic()传入，来发挥作用
+ * 内部直接硬编码入registerRecipeRegister
  */
 public interface INamelessDishRecipeRegister {
     /**
