@@ -51,6 +51,12 @@ dependencies {
     implementation fg.deobf("curse.maven:farmers-delight-398521:4679319")
 
     implementation fg.deobf("curse.maven:jei-238222:7391695")
+
+    // JUnit 5 for testing
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+    testImplementation 'org.mockito:mockito-core:5.7.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.7.0'
 }
 
 
@@ -100,3 +106,8 @@ reobf {
     create("jarJar")
 }
 tasks.named('jarJar').configure { finalizedBy 'reobfJarJar' }
+
+// Configure JUnit 5 tests
+test {
+    useJUnitPlatform()
+}

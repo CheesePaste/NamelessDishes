@@ -3,7 +3,12 @@ package com.cp.nd;
 import com.cp.nd.config.NDConfig;
 import com.cp.nd.item.ModItems;
 import com.cp.nd.recipe.RecipeRegisterManager;
+import com.cp.nd.test.IntegrationTest;
+import com.cp.nd.test.ItemTest;
+import com.cp.nd.test.NBTStackingBugTest;
+import com.cp.nd.test.RecipeTest;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterGameTestsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -29,6 +34,9 @@ public class NamelessDishes {
         // 注册事件
         modEventBus.addListener(this::commonSetup);
 
+        // 注册GameTest
+        modEventBus.addListener(this::registerGameTests);
+
         // 注册Forge事件总线
         MinecraftForge.EVENT_BUS.register(this);
 
@@ -44,6 +52,18 @@ public class NamelessDishes {
         // 初始化管理器
         manager.initialize(event);
         LOGGER.info("Nameless Dishes 框架初始化...");
+    }
+
+    /**
+     * Register GameTest classes
+     */
+    @SuppressWarnings("all")
+    private void registerGameTests(RegisterGameTestsEvent event) {
+        event.register(RecipeTest.class);
+        event.register(ItemTest.class);
+        event.register(IntegrationTest.class);
+        event.register(NBTStackingBugTest.class);  // NBT堆叠Bug修复验证测试
+        LOGGER.info("GameTests registered");
     }
 
 }

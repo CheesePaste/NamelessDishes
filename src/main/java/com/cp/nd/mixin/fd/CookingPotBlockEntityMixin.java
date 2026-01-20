@@ -102,8 +102,15 @@ public abstract class CookingPotBlockEntityMixin {
         ItemStack mealStack = cookingPot.getMeal();
         if (!mealStack.isEmpty()) {
             if (!accessor.farmersdelight$doesMealHaveContainer(mealStack)) {
-                accessor.farmersdelight$moveMealToOutput();
-                didInventoryChange = true;
+                // 修复：检查输出槽是否已有物品，且NBT不同
+                ItemStack outputSlot = accessor.farmersdelight$getInventory().getStackInSlot(8);
+                if (!outputSlot.isEmpty() && !ItemStack.isSameItemSameTags(mealStack, outputSlot)) {
+                    // 输出槽有不同NBT的物品，不移过去，烹饪暂停
+                    NamelessDishes.LOGGER.debug("Output slot has item with different NBT, pausing cooking");
+                } else {
+                    accessor.farmersdelight$moveMealToOutput();
+                    didInventoryChange = true;
+                }
             } else if (!accessor.farmersdelight$getInventory().getStackInSlot(7).isEmpty()) {
                 accessor.farmersdelight$useStoredContainerOnMeal();
                 didInventoryChange = true;

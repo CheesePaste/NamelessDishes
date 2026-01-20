@@ -280,6 +280,20 @@ public class NamelessDishRecipeData {
             return stack;
         }
 
+        // Getters for testing
+        public String getItemId() {
+            return itemId;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        @Nullable
+        public CompoundTag getNbt() {
+            return nbt;
+        }
+
 
     }
 }
