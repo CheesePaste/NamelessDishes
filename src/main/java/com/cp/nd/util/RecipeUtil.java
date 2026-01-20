@@ -24,9 +24,6 @@ public class RecipeUtil {
         }
 
         ResourceLocation recipeId = recipe.getId();
-        if (recipeId == null) {
-            return false;
-        }
 
         try {
             // 获取当前的RecipeManager
@@ -50,7 +47,6 @@ public class RecipeUtil {
             return false;
         } catch (Exception e) {
             // 记录错误
-            // YourMod.LOGGER.error("Failed to add recipe: " + recipeId, e);
             return false;
         }
     }
@@ -98,9 +94,9 @@ public class RecipeUtil {
      */
     private static RecipeManager getRecipeManager() {
         // 优先使用客户端世界的RecipeManager
-        if (Minecraft.getInstance().level != null) {
+        /*if (Minecraft.getInstance().level != null) {
             return Minecraft.getInstance().level.getRecipeManager();
-        }
+        }*/
 
         // 如果客户端没有世界，尝试获取服务器世界的RecipeManager
         return getServerRecipeManager().orElse(null);
@@ -114,9 +110,8 @@ public class RecipeUtil {
         if (server != null) {
             // 尝试从所有世界获取RecipeManager
             for (Level level : server.getAllLevels()) {
-                if (level.getRecipeManager() != null) {
-                    return Optional.of(level.getRecipeManager());
-                }
+                level.getRecipeManager();
+                return Optional.of(level.getRecipeManager());
             }
         }
         return Optional.empty();
