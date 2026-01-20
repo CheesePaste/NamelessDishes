@@ -2,6 +2,7 @@ package com.cp.nd.recipe.fd;
 
 import com.cp.nd.item.AbstractNamelessDishItem;
 import com.cp.nd.api.INamelessDishRecipeRegister;
+import com.cp.nd.util.RecipeUtil;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
@@ -52,7 +53,7 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
     @Override
     public void registerToGame(Recipe<?> recipe) {
         if (recipe instanceof CookingPotRecipe cookingPotRecipe) {
-
+            RecipeUtil.addRecipe(recipe);
         }
     }
 

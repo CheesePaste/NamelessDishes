@@ -34,6 +34,7 @@ public class NamelessDishes {
 
         ModItems.register(modEventBus);
 
+
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
