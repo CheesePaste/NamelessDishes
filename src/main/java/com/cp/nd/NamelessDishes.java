@@ -1,7 +1,6 @@
 package com.cp.nd;
 
 import com.cp.nd.config.NDConfig;
-import com.cp.nd.compatibility.ModCompatibilityManager;
 import com.cp.nd.item.ModItems;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -17,8 +16,6 @@ import org.apache.logging.log4j.Logger;
 public class NamelessDishes {
     public static final String MOD_ID = "nameless_dishes";
     public static final Logger LOGGER = LogManager.getLogger();
-
-    private static ModCompatibilityManager compatibilityManager;
 
     //这里有两个get从1.21.1开始弃用，1.20.1可以正常使用，但是因为警告每次运行都会拉到这个类，所以我先SuppressWarning了
     @SuppressWarnings("all")
@@ -39,15 +36,7 @@ public class NamelessDishes {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         LOGGER.info("Nameless Dishes 框架初始化...");
-
-        // 初始化兼容性管理器
-        compatibilityManager = ModCompatibilityManager.getInstance();
-        compatibilityManager.initialize();
-
-        LOGGER.info("检测到兼容模组: {}", compatibilityManager.getDetectedMods());
+;
     }
 
-    public static ModCompatibilityManager getCompatibilityManager() {
-        return compatibilityManager;
-    }
 }

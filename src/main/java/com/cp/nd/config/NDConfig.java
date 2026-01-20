@@ -27,12 +27,9 @@ public class NDConfig {
     // 无名料理设置
     public final ForgeConfigSpec.DoubleValue baseSaturationMultiplier;
     public final ForgeConfigSpec.IntValue baseHungerMultiplier;
-    public final ForgeConfigSpec.BooleanValue requireCooking;
     public final ForgeConfigSpec.IntValue minIngredients;
     public final ForgeConfigSpec.IntValue maxIngredients;
 
-    // 模组特定设置
-    public final ForgeConfigSpec.ConfigValue<List<? extends String>> farmersDelightBlocks;
 
     private NDConfig(ForgeConfigSpec.Builder builder) {
         builder.push("general");
@@ -45,12 +42,12 @@ public class NDConfig {
         enabledMods = builder
                 .comment("启用的模组兼容列表")
                 .defineList("enabledMods",
-                        Arrays.asList("farmersdelight", "cookingforblockheads"),
+                        Arrays.asList("farmersdelight"),
                         obj -> obj instanceof String);
         cookingBlocks = builder
                 .comment("通用烹饪方块列表（格式：modid:blockid）")
                 .defineList("cookingBlocks",
-                        new ArrayList<>(),
+                        Arrays.asList("farmersdelight:cooking_pot"),
                         obj -> obj instanceof String);
         builder.pop();
 
@@ -61,9 +58,6 @@ public class NDConfig {
         baseHungerMultiplier = builder
                 .comment("基础饥饿值乘数")
                 .defineInRange("baseHungerMultiplier", 80, 10, 200);
-        requireCooking = builder
-                .comment("是否需要烹饪（否则可以合成）")
-                .define("requireCooking", true);
         minIngredients = builder
                 .comment("最少食材数量")
                 .defineInRange("minIngredients", 1, 1, 9);
@@ -72,15 +66,6 @@ public class NDConfig {
                 .defineInRange("maxIngredients", 9, 1, 9);
         builder.pop();
 
-        builder.push("mod_specific");
-        builder.push("farmersdelight");
-        farmersDelightBlocks = builder
-                .comment("农夫乐事兼容的烹饪方块")
-                .defineList("farmersDelightBlocks",
-                        Arrays.asList("farmersdelight:cooking_pot", "farmersdelight:skillet"),
-                        obj -> obj instanceof String);
-        builder.pop();
-        builder.pop();
     }
 
 }

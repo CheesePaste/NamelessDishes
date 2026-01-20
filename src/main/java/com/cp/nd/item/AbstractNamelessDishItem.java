@@ -23,6 +23,7 @@ public abstract class AbstractNamelessDishItem extends Item {
     public static final String FOOD_LEVEL_KEY = "FoodLevel";
     public static final String SATURATION_KEY = "Saturation";
     public static final String INGREDIENTS_KEY = "Ingredients";
+    public static final String COOKING_BLOCK_KEY = "CookingBlock";
 
     public AbstractNamelessDishItem(Properties properties) {
         super(properties);
@@ -30,7 +31,7 @@ public abstract class AbstractNamelessDishItem extends Item {
 
     @Override
     public void appendHoverText(@NotNull ItemStack stack, @Nullable Level level,
-                                @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+                                @NotNull List<Component> tooltip,@NotNull TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
 
         CompoundTag tag = stack.getTag();
@@ -83,14 +84,16 @@ public abstract class AbstractNamelessDishItem extends Item {
     }
 
     public static ItemStack createDish(Item dishItem, int foodLevel, float saturation,
-                                       List<ItemStack> ingredients, boolean withBowl) {
+                                       List<ItemStack> ingredients, boolean withBowl,
+                                       @Nullable String cookingBlockId) { // 新增参数
         ItemStack stack = new ItemStack(dishItem);
-        setDishData(stack, foodLevel, saturation, ingredients, withBowl);
+        setDishData(stack, foodLevel, saturation, ingredients, withBowl, cookingBlockId);
         return stack;
     }
 
     public static void setDishData(ItemStack stack, int foodLevel, float saturation,
-                                   List<ItemStack> ingredients, boolean withBowl) {
+                                   List<ItemStack> ingredients, boolean withBowl,
+                                   @Nullable String cookingBlockId) { // 新增参数
         CompoundTag tag = stack.getOrCreateTag();
 
         // 设置基础属性
@@ -98,12 +101,16 @@ public abstract class AbstractNamelessDishItem extends Item {
         tag.putFloat(SATURATION_KEY, saturation);
         tag.putBoolean("WithBowl", withBowl);
 
+        // 保存料理方块信息
+        if (cookingBlockId != null && !cookingBlockId.isEmpty()) {
+            tag.putString(COOKING_BLOCK_KEY, cookingBlockId);
+        }
+
         // 保存原料列表
         ListTag ingredientsList = new ListTag();
         for (ItemStack ingredient : ingredients) {
             if (!ingredient.isEmpty()) {
                 CompoundTag ingredientTag = new CompoundTag();
-                // 只保存一个副本，避免过多数据
                 ItemStack singleItem = ingredient.copy();
                 singleItem.setCount(1);
                 singleItem.save(ingredientTag);
@@ -111,6 +118,20 @@ public abstract class AbstractNamelessDishItem extends Item {
             }
         }
         tag.put(INGREDIENTS_KEY, ingredientsList);
+    }
+
+
+    @Nullable
+    public static String getCookingBlockId(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        return tag != null && tag.contains(COOKING_BLOCK_KEY) ?
+                tag.getString(COOKING_BLOCK_KEY) : null;
+    }
+
+
+    public static boolean isMadeByCookingBlock(ItemStack stack, String cookingBlockId) {
+        String storedId = getCookingBlockId(stack);
+        return storedId != null && storedId.equals(cookingBlockId);
     }
 
     public static int getFoodLevel(ItemStack stack) {

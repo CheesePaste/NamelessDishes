@@ -1,19 +1,16 @@
 package com.cp.nd.mixin.fd;
 
 import com.cp.nd.NamelessDishes;
-import com.cp.nd.api.ICookingRecipeHandler;
-import com.cp.nd.compatibility.ModCompatibilityManager;
+import com.cp.nd.compatibility.fd.FarmersDelightHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import vectorwing.farmersdelight.common.block.entity.CookingPotBlockEntity;
 import vectorwing.farmersdelight.common.crafting.CookingPotRecipe;
 
@@ -25,7 +22,7 @@ import java.util.Optional;
 @Mixin(CookingPotBlockEntity.class)
 public abstract class CookingPotBlockEntityMixin {
     @Unique
-    private static int cooktime=100;
+    private final static int namelessDishes$cooktime =100;
 
     @Inject(
             method = "cookingTick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lvectorwing/farmersdelight/common/block/entity/CookingPotBlockEntity;)V",
@@ -56,10 +53,7 @@ public abstract class CookingPotBlockEntityMixin {
         }
 
         // 获取农夫乐事处理器
-        ICookingRecipeHandler handler = ModCompatibilityManager.getInstance().getHandlerForMod("farmersdelight");
-        if (!(handler instanceof com.cp.nd.compatibility.fd.FarmersDelightHandler farmersDelightHandler)) {
-            return;
-        }
+        FarmersDelightHandler handler = new FarmersDelightHandler();
 
         // 获取当前输入物品
         List<ItemStack> inputs = new ArrayList<>();
@@ -76,7 +70,7 @@ public abstract class CookingPotBlockEntityMixin {
         }
         ci.cancel();
 
-        accessor.farmersdelight$setCookTimeTotal(cooktime*inputs.size());
+        accessor.farmersdelight$setCookTimeTotal(namelessDishes$cooktime *inputs.size());
         accessor.farmersdelight$setCookTime(accessor.farmersdelight$getCookTime()+1);
         boolean didInventoryChange=false;
         if(accessor.farmersdelight$getCookTime()> accessor.farmersdelight$getCookTimeTotal())
