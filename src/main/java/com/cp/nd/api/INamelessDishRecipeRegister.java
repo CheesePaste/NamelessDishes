@@ -2,6 +2,9 @@ package com.cp.nd.api;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraftforge.items.wrapper.RecipeWrapper;
+import vectorwing.farmersdelight.common.crafting.CookingPotRecipe;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -35,4 +38,8 @@ public interface INamelessDishRecipeRegister {
     String getName();
 
     Set<String> getSupportedBlocks();
+
+    Recipe<?> createRecipeFromNamelessDish(ItemStack namelessDish, @Nullable ResourceLocation recipeId);
+
+    void registerToGame(Recipe<?> recipe);
 }

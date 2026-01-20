@@ -4,6 +4,9 @@ import com.cp.nd.NamelessDishes;
 import com.cp.nd.config.NDConfig;
 import com.cp.nd.item.AbstractNamelessDishItem;
 import com.cp.nd.item.ModItems;
+import com.cp.nd.recipe.RecipeRegisterManager;
+import com.cp.nd.recipe.storage.NamelessDishRecipeData;
+import com.cp.nd.recipe.storage.RecipeStorageManager;
 import com.cp.nd.util.ModDetectionUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -74,13 +77,11 @@ public class FarmersDelightHandler {
     private ItemStack createNamelessItemStack(double hunger, double saturation,
                                               List<ItemStack> ingredients,
                                               String cookingBlockId) { // 新增参数
-        ItemStack result = AbstractNamelessDishItem.createDish(
+        // 传入料理方块ID
+
+        return AbstractNamelessDishItem.createDish(
                 ModItems.NAMELESS_DISH_WITH_BOWL.get(),
-                (int) hunger, (float) saturation, ingredients, true, cookingBlockId); // 传入料理方块ID
-
-        result.getOrCreateTag().putBoolean("IsNamelessDish", true);
-
-        return result;
+                (int) hunger, (float) saturation, ingredients, true, cookingBlockId);
     }
 
     /// 生成无名料理
@@ -200,6 +201,7 @@ public class FarmersDelightHandler {
                         3
                 );
             }
+            testSave(finalResult);
 
             return true;
         } catch (Exception e) {
@@ -207,6 +209,32 @@ public class FarmersDelightHandler {
             return false;
         }
     }
+    private void testSave(ItemStack dishStack) {
+        try {
+            // 获取配方注册管理器
+            RecipeRegisterManager recipeManager = RecipeRegisterManager.getInstance();
+
+            // 从ItemStack创建配方数据
+            NamelessDishRecipeData recipeData = NamelessDishRecipeData.fromItemStack(dishStack, null);
+
+            // 获取存储管理器并保存
+            RecipeStorageManager storageManager = recipeManager.getStorageManager();
+            boolean saved = storageManager.saveRecipe(recipeData);
+
+            if (saved) {
+                NamelessDishes.LOGGER.info("Recipe saved to file: {}", recipeData.getRecipeId());
+
+                    recipeManager.registerAndSaveRecipe(dishStack, null);
+                    NamelessDishes.LOGGER.info("Test mode: Recipe also registered to game");
+            } else {
+                NamelessDishes.LOGGER.warn("Failed to save recipe to file");
+            }
+
+        } catch (Exception e) {
+            NamelessDishes.LOGGER.error("Error saving recipe to file", e);
+        }
+    }
+
 
     /// 辅助方法：处理剩余物品
     private void handleRemainingItem(Level level, CookingPotBlockEntity cookingPot, ItemStack remainder) {

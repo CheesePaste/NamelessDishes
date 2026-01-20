@@ -5,18 +5,20 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-
 
 public abstract class AbstractNamelessDishItem extends Item {
 
@@ -31,37 +33,73 @@ public abstract class AbstractNamelessDishItem extends Item {
 
     @Override
     public void appendHoverText(@NotNull ItemStack stack, @Nullable Level level,
-                                @NotNull List<Component> tooltip,@NotNull TooltipFlag flag) {
+                                @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
 
         CompoundTag tag = stack.getTag();
         if (tag != null) {
-            // 显示原料列表
+            // 显示原料列表（用逗号分隔）
             if (tag.contains(INGREDIENTS_KEY, Tag.TAG_LIST)) {
                 ListTag ingredients = tag.getList(INGREDIENTS_KEY, Tag.TAG_COMPOUND);
                 if (!ingredients.isEmpty()) {
-                    tooltip.add(Component.translatable("tooltip.nameless_dishes.ingredients")
-                            .withStyle(ChatFormatting.DARK_GRAY));
-
+                    List<Component> ingredientComponents = new ArrayList<>();
                     for (int i = 0; i < ingredients.size(); i++) {
                         CompoundTag ingredientTag = ingredients.getCompound(i);
                         ItemStack ingredientStack = ItemStack.of(ingredientTag);
                         if (!ingredientStack.isEmpty()) {
-                            tooltip.add(Component.literal("  ").append(
-                                            ingredientStack.getHoverName())
-                                    .withStyle(ChatFormatting.DARK_GREEN));
+                            ingredientComponents.add(ingredientStack.getHoverName());
                         }
                     }
+
+                    if (!ingredientComponents.isEmpty()) {
+                        tooltip.add(Component.translatable("tooltip.nameless_dishes.ingredients")
+                                .withStyle(ChatFormatting.GREEN));
+
+                        // 创建逗号分隔的原料列表
+                        Component ingredientsList = Component.empty();
+                        for (int i = 0; i < ingredientComponents.size(); i++) {
+                            ingredientsList = ingredientsList.copy()
+                                    .append(ingredientComponents.get(i));
+                            if (i < ingredientComponents.size() - 1) {
+                                ingredientsList = ingredientsList.copy()
+                                        .append(Component.literal(", ").withStyle(ChatFormatting.WHITE));
+                            }
+                        }
+                        tooltip.add(Component.literal("  ").append(ingredientsList));
+                    }
+                }
+            }
+
+            // 显示制作方块（在原料下面）
+            if (tag.contains(COOKING_BLOCK_KEY)) {
+                String cookingBlockId = tag.getString(COOKING_BLOCK_KEY);
+                if (!cookingBlockId.isEmpty()) {
+                    // 尝试获取方块的显示名称
+                    Component blockName = getBlockDisplayName(cookingBlockId);
+                    tooltip.add(Component.translatable("tooltip.nameless_dishes.cooked_in",
+                                    blockName).withStyle(ChatFormatting.BLUE));
                 }
             }
         }
     }
 
-    @Override
-    public FoodProperties getFoodProperties() {
-        // 动态获取食物属性
-        return null; // 在ItemStack实例中处理
+    /**
+     * 根据方块ID获取方块的显示名称
+     */
+    @SuppressWarnings("all")
+    private Component getBlockDisplayName(String blockId) {
+        // 使用注册表获取方块
+        Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId));
+        if (block != null) {
+            // 使用方块的物品形式来获取显示名称
+            return new ItemStack(block).getHoverName();
+        }
+
+        // 如果无法获取方块，显示原始ID
+        return Component.literal(blockId.split(":")[1]); // 只显示路径部分，去掉modid
     }
+
+
     @Override
     public boolean isEdible() {
         return true;
@@ -85,7 +123,7 @@ public abstract class AbstractNamelessDishItem extends Item {
 
     public static ItemStack createDish(Item dishItem, int foodLevel, float saturation,
                                        List<ItemStack> ingredients, boolean withBowl,
-                                       @Nullable String cookingBlockId) { // 新增参数
+                                       @Nullable String cookingBlockId) {
         ItemStack stack = new ItemStack(dishItem);
         setDishData(stack, foodLevel, saturation, ingredients, withBowl, cookingBlockId);
         return stack;
@@ -93,7 +131,7 @@ public abstract class AbstractNamelessDishItem extends Item {
 
     public static void setDishData(ItemStack stack, int foodLevel, float saturation,
                                    List<ItemStack> ingredients, boolean withBowl,
-                                   @Nullable String cookingBlockId) { // 新增参数
+                                   @Nullable String cookingBlockId) {
         CompoundTag tag = stack.getOrCreateTag();
 
         // 设置基础属性
@@ -120,14 +158,12 @@ public abstract class AbstractNamelessDishItem extends Item {
         tag.put(INGREDIENTS_KEY, ingredientsList);
     }
 
-
     @Nullable
     public static String getCookingBlockId(ItemStack stack) {
         CompoundTag tag = stack.getTag();
         return tag != null && tag.contains(COOKING_BLOCK_KEY) ?
                 tag.getString(COOKING_BLOCK_KEY) : null;
     }
-
 
     public static boolean isMadeByCookingBlock(ItemStack stack, String cookingBlockId) {
         String storedId = getCookingBlockId(stack);
@@ -164,8 +200,7 @@ public abstract class AbstractNamelessDishItem extends Item {
         return tag != null && tag.getBoolean("WithBowl");
     }
 
-    public ItemStack getContainerItem()
-    {
+    public ItemStack getContainerItem() {
         return ItemStack.EMPTY;
     }
 }

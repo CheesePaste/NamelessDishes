@@ -3,8 +3,13 @@ package com.cp.nd.recipe;
 import com.cp.nd.api.INamelessDishRecipeRegister;
 import com.cp.nd.item.AbstractNamelessDishItem;
 import com.cp.nd.recipe.fd.CookingPotRecipeRegister;
+import com.cp.nd.recipe.storage.NamelessDishRecipeData;
+import com.cp.nd.recipe.storage.RecipeStorageManager;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 无名料理配方注册管理器
- * 负责管理和分发配方注册任务
+ * 负责管理和分发配方注册任务，并集成配方存储功能
  */
 public class RecipeRegisterManager {
     private static final Logger LOGGER = LogManager.getLogger(RecipeRegisterManager.class);
@@ -27,9 +32,42 @@ public class RecipeRegisterManager {
     private final Map<String, INamelessDishRecipeRegister> registerByBlockId = new ConcurrentHashMap<>();
     private final List<INamelessDishRecipeRegister> dynamicRegisters = new ArrayList<>();
 
+    // 配方存储管理器
+    private final RecipeStorageManager storageManager;
+
+    // 缓存已注册的配方ID，避免重复注册
+    private final Set<String> registeredRecipeIds = ConcurrentHashMap.newKeySet();
+
+    // 等待注册的配方队列（用于异步处理）
+    private final Queue<RecipeRegistrationTask> pendingRegistrations = new LinkedList<>();
+
+    // 控制变量
+    private boolean isInitialized = false;
+    private boolean autoSaveEnabled = true;
+    private boolean autoLoadEnabled = true;
+
+    /**
+     * 配方注册任务类
+     */
+    private static class RecipeRegistrationTask {
+        final ItemStack namelessDish;
+        final ResourceLocation recipeId;
+        final boolean saveToFile;
+
+        RecipeRegistrationTask(ItemStack namelessDish, @Nullable ResourceLocation recipeId, boolean saveToFile) {
+            this.namelessDish = namelessDish.copy();
+            this.recipeId = recipeId;
+            this.saveToFile = saveToFile;
+        }
+    }
+
     private RecipeRegisterManager() {
+        this.storageManager = RecipeStorageManager.getInstance();
+
         // 注册默认的注册器
         registerDefaultRegisters();
+
+        LOGGER.info("RecipeRegisterManager initialized");
     }
 
     public static RecipeRegisterManager getInstance() {
@@ -37,32 +75,63 @@ public class RecipeRegisterManager {
     }
 
     /**
+     * 初始化管理器（在游戏加载时调用）
+     */
+    public void initialize(FMLCommonSetupEvent event) {
+        if (isInitialized) {
+            LOGGER.warn("RecipeRegisterManager already initialized");
+            return;
+        }
+
+        event.enqueueWork(() -> {
+            // 加载已保存的配方
+            if (autoLoadEnabled) {
+                loadAndRegisterSavedRecipes();
+            }
+
+            // 处理等待注册的配方
+            processPendingRegistrations();
+
+            isInitialized = true;
+            LOGGER.info("RecipeRegisterManager setup completed");
+        });
+    }
+
+    /**
      * 注册默认的注册器
      */
     private void registerDefaultRegisters() {
         registerRecipeRegister(new CookingPotRecipeRegister());
+        LOGGER.debug("Default recipe registers registered");
     }
 
     /**
      * 注册新的配方注册器
      */
     public void registerRecipeRegister(INamelessDishRecipeRegister register) {
+        Objects.requireNonNull(register, "Recipe register cannot be null");
+
+        synchronized (this) {
             for (String blockId : register.getSupportedBlocks()) {
                 registerByBlockId.put(blockId, register);
                 LOGGER.debug("Registered {} for block: {}", register.getName(), blockId);
             }
+        }
     }
 
-
-
-    /// 这里便于其他模组兼容，不用硬编码到类里面
+    /**
+     * 注册动态配方注册器
+     */
     public void registerRecipeRegisterDynamic(INamelessDishRecipeRegister register) {
-            // 动态注册器，在注册时检查支持性
+        Objects.requireNonNull(register, "Recipe register cannot be null");
+
+        synchronized (this) {
             dynamicRegisters.add(register);
-            LOGGER.debug("Registered dynamic register: {}", register.getName());
-        for (String blockId : register.getSupportedBlocks()) {
-            registerByBlockId.put(blockId, register);
-            LOGGER.debug("Dynamic Registered {} for block: {}", register.getName(), blockId);
+            for (String blockId : register.getSupportedBlocks()) {
+                registerByBlockId.put(blockId, register);
+                LOGGER.debug("Dynamic Registered {} for block: {}", register.getName(), blockId);
+            }
+            LOGGER.info("Registered dynamic recipe register: {}", register.getName());
         }
     }
 
@@ -71,7 +140,25 @@ public class RecipeRegisterManager {
      */
     @Nullable
     public INamelessDishRecipeRegister findRegister(String cookingBlockId) {
-        return registerByBlockId.get(cookingBlockId);
+        // 先检查静态注册器
+        INamelessDishRecipeRegister register = registerByBlockId.get(cookingBlockId);
+
+        // 如果没有找到，检查动态注册器
+        if (register == null) {
+            synchronized (this) {
+                for (INamelessDishRecipeRegister dynamicRegister : dynamicRegisters) {
+                    if (dynamicRegister.isSupport(cookingBlockId)) {
+                        register = dynamicRegister;
+                        registerByBlockId.put(cookingBlockId, register);
+                        LOGGER.debug("Dynamic register {} supports block: {}",
+                                register.getName(), cookingBlockId);
+                        break;
+                    }
+                }
+            }
+        }
+
+        return register;
     }
 
     /**
@@ -84,17 +171,22 @@ public class RecipeRegisterManager {
         }
 
         if (!(stack.getItem() instanceof AbstractNamelessDishItem)) {
-            LOGGER.warn("Item {} is not a NamelessDish", ForgeRegistries.ITEMS.getKey(stack.getItem()));
+            LOGGER.warn("Item {} is not a NamelessDish",
+                    ForgeRegistries.ITEMS.getKey(stack.getItem()));
             return false;
         }
 
-        if (stack.getTag() != null && (!stack.hasTag() || !stack.getTag().contains(AbstractNamelessDishItem.INGREDIENTS_KEY))) {
-            LOGGER.warn("NamelessDish {} is missing required NBT data", ForgeRegistries.ITEMS.getKey(stack.getItem()));
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(AbstractNamelessDishItem.INGREDIENTS_KEY)) {
+            LOGGER.warn("NamelessDish {} is missing required NBT data",
+                    ForgeRegistries.ITEMS.getKey(stack.getItem()));
             return false;
         }
 
-        if (AbstractNamelessDishItem.getIngredients(stack).isEmpty()) {
-            LOGGER.warn("NamelessDish {} has no ingredients", ForgeRegistries.ITEMS.getKey(stack.getItem()));
+        List<ItemStack> ingredients = AbstractNamelessDishItem.getIngredients(stack);
+        if (ingredients.isEmpty()) {
+            LOGGER.warn("NamelessDish {} has no ingredients",
+                    ForgeRegistries.ITEMS.getKey(stack.getItem()));
             return false;
         }
 
@@ -102,39 +194,108 @@ public class RecipeRegisterManager {
     }
 
     /**
-     * 注册无名料理到对应的配方系统
+     * 注册无名料理配方（基础方法）
      */
     public boolean registerRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
+        return registerRecipe(namelessDish, recipeId, autoSaveEnabled);
+    }
+
+    /**
+     * 注册无名料理配方（可控制是否保存到文件）
+     */
+    public boolean registerRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId, boolean saveToFile) {
+        // 如果管理器未初始化，加入待处理队列
+        if (!isInitialized) {
+            pendingRegistrations.offer(new RecipeRegistrationTask(namelessDish, recipeId, saveToFile));
+            LOGGER.debug("Recipe registration queued, waiting for initialization");
+            return true;
+        }
+
+        return processRecipeRegistration(namelessDish, recipeId, saveToFile);
+    }
+
+    /**
+     * 处理单个配方注册
+     */
+    private boolean processRecipeRegistration(ItemStack namelessDish, @Nullable ResourceLocation recipeId, boolean saveToFile) {
         if (!isValidNamelessDish(namelessDish)) {
             LOGGER.error("Invalid nameless dish provided for recipe registration");
             return false;
         }
 
         String cookingBlockId = AbstractNamelessDishItem.getCookingBlockId(namelessDish);
-        INamelessDishRecipeRegister register = findRegister(cookingBlockId);
+        if (cookingBlockId == null) {
+            LOGGER.error("NamelessDish has no cooking block information");
+            return false;
+        }
 
+        INamelessDishRecipeRegister register = findRegister(cookingBlockId);
         if (register == null) {
             LOGGER.warn("No suitable recipe register found for cooking block: {}", cookingBlockId);
             return false;
+        }
+
+        // 生成最终的配方ID
+        ResourceLocation finalRecipeId = recipeId != null ? recipeId : generateRecipeId(namelessDish);
+
+        // 检查是否已注册
+        String recipeKey = finalRecipeId.toString();
+        if (registeredRecipeIds.contains(recipeKey)) {
+            LOGGER.debug("Recipe {} already registered, skipping", finalRecipeId);
+            return true; // 视为成功，避免重复注册
         }
 
         LOGGER.debug("Registering nameless dish {} using {}",
                 ForgeRegistries.ITEMS.getKey(namelessDish.getItem()),
                 register.getName());
 
-        return register.register(namelessDish, recipeId);
+        // 调用注册器进行游戏内注册
+        boolean registrationSuccess = register.register(namelessDish, finalRecipeId);
+
+        if (registrationSuccess) {
+            registeredRecipeIds.add(recipeKey);
+            LOGGER.info("Successfully registered recipe: {}", finalRecipeId);
+
+            // 保存到文件系统
+            if (saveToFile) {
+                saveRecipeToFile(namelessDish, finalRecipeId);
+            }
+
+            return true;
+        } else {
+            LOGGER.error("Failed to register recipe: {}", finalRecipeId);
+            return false;
+        }
+    }
+
+    /**
+     * 注册并保存配方到文件
+     */
+    @Nullable
+    public ResourceLocation registerAndSaveRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
+        if (registerRecipe(namelessDish, recipeId, true)) {
+            return recipeId != null ? recipeId : generateRecipeId(namelessDish);
+        }
+        return null;
     }
 
     /**
      * 批量注册无名料理配方
      */
     public int batchRegisterRecipes(Iterable<ItemStack> namelessDishes) {
+        return batchRegisterRecipes(namelessDishes, autoSaveEnabled);
+    }
+
+    /**
+     * 批量注册无名料理配方（可控制是否保存到文件）
+     */
+    public int batchRegisterRecipes(Iterable<ItemStack> namelessDishes, boolean saveToFile) {
         int successCount = 0;
         int totalCount = 0;
 
         for (ItemStack dish : namelessDishes) {
             totalCount++;
-            if (registerRecipe(dish, null)) {
+            if (registerRecipe(dish, null, saveToFile)) {
                 successCount++;
             }
         }
@@ -145,12 +306,295 @@ public class RecipeRegisterManager {
     }
 
     /**
+     * 保存配方到文件
+     */
+    private void saveRecipeToFile(ItemStack namelessDish, ResourceLocation recipeId) {
+        try {
+            NamelessDishRecipeData recipeData = NamelessDishRecipeData.fromItemStack(
+                    namelessDish,
+                    recipeId.toString()
+            );
+
+            boolean saved = storageManager.saveRecipe(recipeData);
+
+            if (saved) {
+                LOGGER.debug("Successfully saved recipe {} to file", recipeId);
+            } else {
+                LOGGER.warn("Failed to save recipe {} to file", recipeId);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error saving recipe to file: {}", recipeId, e);
+        }
+    }
+
+    /**
+     * 加载并注册已保存的配方
+     */
+    public void loadAndRegisterSavedRecipes() {
+        LOGGER.info("Loading saved recipes from storage...");
+
+        // 加载所有保存的配方
+        Map<String, List<NamelessDishRecipeData>> allRecipes = storageManager.loadAllRecipes();
+        int totalLoaded = 0;
+        int totalRegistered = 0;
+
+        for (Map.Entry<String, List<NamelessDishRecipeData>> entry : allRecipes.entrySet()) {
+            String cookingBlockId = entry.getKey();
+            List<NamelessDishRecipeData> recipes = entry.getValue();
+
+            LOGGER.info("Found {} recipes for cooking block: {}", recipes.size(), cookingBlockId);
+            totalLoaded += recipes.size();
+
+            // 获取对应的注册器
+            INamelessDishRecipeRegister register = findRegister(cookingBlockId);
+            if (register == null) {
+                LOGGER.warn("No register found for cooking block: {}, skipping {} recipes",
+                        cookingBlockId, recipes.size());
+                continue;
+            }
+
+            // 注册每个配方
+            for (NamelessDishRecipeData recipeData : recipes) {
+                if (registerRecipeFromData(recipeData, register)) {
+                    totalRegistered++;
+                }
+            }
+        }
+
+        LOGGER.info("Recipe loading completed: {} loaded, {} registered", totalLoaded, totalRegistered);
+    }
+
+    /**
+     * 从配方数据注册配方
+     */
+    private boolean registerRecipeFromData(NamelessDishRecipeData recipeData,
+                                           INamelessDishRecipeRegister register) {
+        try {
+            String recipeId = recipeData.getRecipeId();
+
+            // 检查是否已注册
+            if (registeredRecipeIds.contains(recipeId)) {
+                LOGGER.debug("Recipe {} already registered, skipping", recipeId);
+                return true;
+            }
+
+            // 根据配方数据创建ItemStack
+            ItemStack dishStack = createDishStackFromData(recipeData);
+            if (dishStack.isEmpty()) {
+                LOGGER.error("Failed to create dish stack from recipe: {}", recipeId);
+                return false;
+            }
+
+            // 使用注册器创建并注册配方
+            @SuppressWarnings("all")
+            ResourceLocation finalRecipeId = new ResourceLocation("nameless_dishes", recipeId);
+
+            // 创建配方对象
+            net.minecraft.world.item.crafting.Recipe<?> recipe =
+                    register.createRecipeFromNamelessDish(dishStack, finalRecipeId);
+
+            if (recipe != null) {
+                // 注册到游戏
+                register.registerToGame(recipe);
+
+                // 添加到已注册集合
+                registeredRecipeIds.add(recipeId);
+                LOGGER.info("Successfully registered recipe from file: {}", recipeId);
+                return true;
+            } else {
+                LOGGER.error("Failed to create recipe from data: {}", recipeId);
+                return false;
+            }
+
+        } catch (Exception e) {
+            LOGGER.error("Error registering recipe from data: {}", recipeData.getRecipeId(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 从配方数据创建ItemStack
+     */
+    @SuppressWarnings("all")
+    private ItemStack createDishStackFromData(NamelessDishRecipeData recipeData) {
+        try {
+            // 获取原料列表
+            List<ItemStack> ingredients = new ArrayList<>();
+            for (NamelessDishRecipeData.IngredientData ingredientData : recipeData.getIngredients()) {
+                ItemStack ingredientStack = ingredientData.createItemStack();
+                if (!ingredientStack.isEmpty()) {
+                    ingredients.add(ingredientStack);
+                }
+            }
+
+            if (ingredients.isEmpty()) {
+                LOGGER.error("No valid ingredients found for recipe: {}", recipeData.getRecipeId());
+                return ItemStack.EMPTY;
+            }
+
+            // 获取料理物品（需要根据是否有碗选择不同的物品）
+            // 这里需要根据您的Mod的物品注册来修改
+            Item dishItem;
+
+            if (recipeData.isWithBowl()) {
+
+                // 假设您有一个ModItems类来管理物品注册
+                dishItem = ForgeRegistries.ITEMS.getValue(
+
+                        new ResourceLocation("your_mod_id", "nameless_dish_with_bowl")
+                );
+            } else {
+                dishItem = ForgeRegistries.ITEMS.getValue(
+                        new ResourceLocation("your_mod_id", "nameless_dish")
+                );
+            }
+
+            if (dishItem == null) {
+                LOGGER.error("Dish item not found for recipe: {}", recipeData.getRecipeId());
+                return ItemStack.EMPTY;
+            }
+
+            // 使用AbstractNamelessDishItem的createDish方法创建
+            return AbstractNamelessDishItem.createDish(
+                    dishItem,
+                    recipeData.getFoodLevel(),
+                    recipeData.getSaturation(),
+                    ingredients,
+                    recipeData.isWithBowl(),
+                    recipeData.getCookingBlockId()
+            );
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to create dish stack from recipe data", e);
+            return ItemStack.EMPTY;
+        }
+    }
+
+    /**
+     * 从文件重新加载并注册配方
+     */
+    public void reloadRecipesFromStorage() {
+        LOGGER.info("Reloading recipes from storage...");
+
+        // 清空当前注册
+        clearAllRegistrations();
+
+        // 重新加载并注册
+        loadAndRegisterSavedRecipes();
+
+        LOGGER.info("Recipe reload completed");
+    }
+
+
+    /**
+     * 处理待注册的配方队列
+     */
+    private void processPendingRegistrations() {
+        LOGGER.debug("Processing {} pending recipe registrations", pendingRegistrations.size());
+
+        int processed = 0;
+        int succeeded = 0;
+
+        while (!pendingRegistrations.isEmpty()) {
+            RecipeRegistrationTask task = pendingRegistrations.poll();
+            processed++;
+
+            if (processRecipeRegistration(task.namelessDish, task.recipeId, task.saveToFile)) {
+                succeeded++;
+            }
+        }
+
+        LOGGER.debug("Processed {} pending registrations, {} succeeded",
+                processed, succeeded);
+    }
+
+    /**
+     * 生成配方ID
+     */
+    @SuppressWarnings("all")
+    private ResourceLocation generateRecipeId(ItemStack namelessDish) {
+        List<ItemStack> ingredients = AbstractNamelessDishItem.getIngredients(namelessDish);
+        StringBuilder hashBuilder = new StringBuilder();
+
+        // 对原料排序以确保相同的原料组合生成相同的ID
+        List<String> ingredientIds = new ArrayList<>();
+        for (ItemStack ingredient : ingredients) {
+            ResourceLocation id = ForgeRegistries.ITEMS.getKey(ingredient.getItem());
+            if (id != null) {
+                ingredientIds.add(id.toString());
+            }
+        }
+
+        ingredientIds.sort(String::compareTo);
+        for (String id : ingredientIds) {
+            hashBuilder.append(id).append("_");
+        }
+
+        // 添加料理方块信息
+        String cookingBlockId = AbstractNamelessDishItem.getCookingBlockId(namelessDish);
+        if (cookingBlockId != null) {
+            hashBuilder.append(cookingBlockId.replace(":", "_"));
+        }
+
+        // 添加容器信息
+        if (AbstractNamelessDishItem.hasBowl(namelessDish)) {
+            hashBuilder.append("_bowl");
+        }
+
+        // 生成UUID并取前8位
+        String hash = UUID.nameUUIDFromBytes(hashBuilder.toString().getBytes()).toString()
+                .replace("-", "")
+                .substring(0, 8);
+
+
+        return new ResourceLocation("nameless_dishes", "autogen_" + hash);
+    }
+
+    /**
+     * 获取所有已注册的配方ID
+     */
+    public Set<String> getRegisteredRecipeIds() {
+        return Collections.unmodifiableSet(registeredRecipeIds);
+    }
+
+    /**
+     * 检查配方是否已注册
+     */
+    public boolean isRecipeRegistered(String recipeId) {
+        return registeredRecipeIds.contains(recipeId);
+    }
+
+    /**
+     * 检查配方是否已注册（通过ResourceLocation）
+     */
+    public boolean isRecipeRegistered(ResourceLocation recipeId) {
+        return recipeId != null && registeredRecipeIds.contains(recipeId.toString());
+    }
+
+    /**
+     * 从文件删除配方
+     */
+    public boolean deleteRecipeFromStorage(String cookingBlockId, String recipeId) {
+        boolean deleted = storageManager.deleteRecipe(cookingBlockId, recipeId);
+
+        if (deleted) {
+            registeredRecipeIds.remove(recipeId);
+            LOGGER.info("Deleted recipe from storage: {}", recipeId);
+        }
+
+        return deleted;
+    }
+
+    /**
      * 获取所有已注册的注册器信息（用于调试）
      */
     public Map<String, String> getRegisterInfo() {
         Map<String, String> info = new LinkedHashMap<>();
         info.put("Static registers count", String.valueOf(registerByBlockId.size()));
         info.put("Dynamic registers count", String.valueOf(dynamicRegisters.size()));
+        info.put("Registered recipes", String.valueOf(registeredRecipeIds.size()));
+        info.put("Pending registrations", String.valueOf(pendingRegistrations.size()));
+        info.put("Initialized", String.valueOf(isInitialized));
 
         for (Map.Entry<String, INamelessDishRecipeRegister> entry : registerByBlockId.entrySet()) {
             info.put("Block: " + entry.getKey(), "Register: " + entry.getValue().getName());
@@ -161,5 +605,76 @@ public class RecipeRegisterManager {
         }
 
         return info;
+    }
+
+    /**
+     * 获取存储管理器（用于高级操作）
+     */
+    public RecipeStorageManager getStorageManager() {
+        return storageManager;
+    }
+
+    /**
+     * 设置是否自动保存配方到文件
+     */
+    public void setAutoSaveEnabled(boolean enabled) {
+        this.autoSaveEnabled = enabled;
+        LOGGER.debug("Auto-save enabled: {}", enabled);
+    }
+
+    /**
+     * 设置是否自动从文件加载配方
+     */
+    public void setAutoLoadEnabled(boolean enabled) {
+        this.autoLoadEnabled = enabled;
+        LOGGER.debug("Auto-load enabled: {}", enabled);
+    }
+
+    /**
+     * 清空所有已注册的配方（用于重新加载）
+     */
+    public void clearAllRegistrations() {
+        synchronized (this) {
+            registeredRecipeIds.clear();
+            pendingRegistrations.clear();
+            LOGGER.info("Cleared all recipe registrations");
+        }
+    }
+
+    /**
+     * 重新加载所有配方
+     */
+    public void reloadAllRecipes() {
+        LOGGER.info("Reloading all recipes...");
+
+        clearAllRegistrations();
+        storageManager.clearCache();
+
+        // 重新加载并注册
+        loadAndRegisterSavedRecipes();
+
+        LOGGER.info("Recipe reload completed");
+    }
+
+    /**
+     * 导出配方统计数据
+     */
+    public Map<String, Object> exportStatistics() {
+        Map<String, Object> stats = new LinkedHashMap<>();
+
+        stats.put("total_registered_recipes", registeredRecipeIds.size());
+        stats.put("pending_registrations", pendingRegistrations.size());
+        stats.put("supported_blocks", registerByBlockId.size());
+        stats.put("dynamic_registers", dynamicRegisters.size());
+
+        // 按料理方块统计
+        Map<String, Integer> recipesByBlock = new HashMap<>();
+        for (String recipeId : registeredRecipeIds) {
+            // 从recipeId中提取信息或通过其他方式获取
+            // 这里简化处理，实际需要更复杂的逻辑
+        }
+        stats.put("recipes_by_block", recipesByBlock);
+
+        return stats;
     }
 }
