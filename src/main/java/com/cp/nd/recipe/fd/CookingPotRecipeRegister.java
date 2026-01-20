@@ -7,7 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraftforge.items.wrapper.RecipeWrapper;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,32 +45,16 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
         return SUPPORTED_BLOCKS;
     }
 
-    @Override
-    public boolean register(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
-        try {
-            CookingPotRecipe recipe = (CookingPotRecipe) createRecipeFromNamelessDish(namelessDish, recipeId);
-            if (recipe != null) {
-                // 注册配方到游戏
-                registerToGame(recipe);
-                LOGGER.info("Successfully registered Cooking Pot recipe for {}",
-                        ForgeRegistries.ITEMS.getKey(namelessDish.getItem()));
-                return true;
-            }
-            LOGGER.error("Failed to create Cooking Pot recipe from nameless dish");
-            return false;
-        } catch (Exception e) {
-            LOGGER.error("Error creating Cooking Pot recipe", e);
-            return false;
-        }
-    }
-
     /**
      * 将配方注册到游戏系统
      */
     @Override
     public void registerToGame(Recipe<?> recipe) {
-        // TODO: 实现具体的游戏配方注册逻辑
-        // 例如：ForgeRegistries.RECIPE_TYPES.register(recipe.getId(), recipe);
+        if (recipe != null) {
+            // TODO: 实现具体的游戏配方注册逻辑
+            // 例如：ForgeRegistries.RECIPE_TYPES.register(recipe.getId(), recipe);
+            LOGGER.info("Registered Cooking Pot recipe: {}", recipe.getId());
+        }
     }
 
     /**
@@ -86,6 +69,7 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
     public Recipe<?> createRecipeFromNamelessDish(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
         List<ItemStack> ingredients = AbstractNamelessDishItem.getIngredients(namelessDish);
         if (ingredients.isEmpty()) {
+            LOGGER.warn("Cannot create recipe from nameless dish with no ingredients");
             return null;
         }
 
@@ -93,12 +77,16 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
         NonNullList<Ingredient> ingredientList = createIngredientList(ingredients);
 
         if (ingredientList.isEmpty()) {
+            LOGGER.warn("Cannot create recipe with empty ingredient list");
             return null;
         }
 
         ItemStack container = AbstractNamelessDishItem.hasBowl(namelessDish) ?
                 new ItemStack(net.minecraft.world.item.Items.BOWL) : ItemStack.EMPTY;
         int cookTime = ingredients.size() * 100;
+
+        LOGGER.debug("Creating Cooking Pot recipe: {} with {} ingredients",
+                finalRecipeId, ingredients.size());
 
         return new CookingPotRecipe(
                 finalRecipeId,

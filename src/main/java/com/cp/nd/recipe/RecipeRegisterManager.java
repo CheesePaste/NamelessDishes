@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.LogManager;
@@ -43,8 +44,6 @@ public class RecipeRegisterManager {
 
     // 控制变量
     private boolean isInitialized = false;
-    private boolean autoSaveEnabled = true;
-    private boolean autoLoadEnabled = true;
 
     /**
      * 配方注册任务类
@@ -84,10 +83,7 @@ public class RecipeRegisterManager {
         }
 
         event.enqueueWork(() -> {
-            // 加载已保存的配方
-            if (autoLoadEnabled) {
-                loadAndRegisterSavedRecipes();
-            }
+            loadAndRegisterSavedRecipes();
 
             // 处理等待注册的配方
             processPendingRegistrations();
@@ -194,13 +190,6 @@ public class RecipeRegisterManager {
     }
 
     /**
-     * 注册无名料理配方（基础方法）
-     */
-    public boolean registerRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
-        return registerRecipe(namelessDish, recipeId, autoSaveEnabled);
-    }
-
-    /**
      * 注册无名料理配方（可控制是否保存到文件）
      */
     public boolean registerRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId, boolean saveToFile) {
@@ -249,21 +238,27 @@ public class RecipeRegisterManager {
                 ForgeRegistries.ITEMS.getKey(namelessDish.getItem()),
                 register.getName());
 
-        // 调用注册器进行游戏内注册
-        boolean registrationSuccess = register.register(namelessDish, finalRecipeId);
+        // 1. 创建配方对象
+        Recipe<?> recipe = register.createRecipeFromNamelessDish(namelessDish, finalRecipeId);
+        if (recipe == null) {
+            LOGGER.error("Failed to create recipe from nameless dish");
+            return false;
+        }
 
-        if (registrationSuccess) {
+        // 2. 注册配方到游戏
+        try {
+            register.registerToGame(recipe);
             registeredRecipeIds.add(recipeKey);
             LOGGER.info("Successfully registered recipe: {}", finalRecipeId);
 
-            // 保存到文件系统
+            // 3. 保存到文件系统
             if (saveToFile) {
                 saveRecipeToFile(namelessDish, finalRecipeId);
             }
 
             return true;
-        } else {
-            LOGGER.error("Failed to register recipe: {}", finalRecipeId);
+        } catch (Exception e) {
+            LOGGER.error("Failed to register recipe to game: {}", finalRecipeId, e);
             return false;
         }
     }
@@ -277,13 +272,6 @@ public class RecipeRegisterManager {
             return recipeId != null ? recipeId : generateRecipeId(namelessDish);
         }
         return null;
-    }
-
-    /**
-     * 批量注册无名料理配方
-     */
-    public int batchRegisterRecipes(Iterable<ItemStack> namelessDishes) {
-        return batchRegisterRecipes(namelessDishes, autoSaveEnabled);
     }
 
     /**
@@ -389,22 +377,20 @@ public class RecipeRegisterManager {
             @SuppressWarnings("all")
             ResourceLocation finalRecipeId = new ResourceLocation("nameless_dishes", recipeId);
 
-            // 创建配方对象
-            net.minecraft.world.item.crafting.Recipe<?> recipe =
-                    register.createRecipeFromNamelessDish(dishStack, finalRecipeId);
-
-            if (recipe != null) {
-                // 注册到游戏
-                register.registerToGame(recipe);
-
-                // 添加到已注册集合
-                registeredRecipeIds.add(recipeId);
-                LOGGER.info("Successfully registered recipe from file: {}", recipeId);
-                return true;
-            } else {
+            // 1. 创建配方对象
+            Recipe<?> recipe = register.createRecipeFromNamelessDish(dishStack, finalRecipeId);
+            if (recipe == null) {
                 LOGGER.error("Failed to create recipe from data: {}", recipeId);
                 return false;
             }
+
+            // 2. 注册到游戏
+            register.registerToGame(recipe);
+
+            // 添加到已注册集合
+            registeredRecipeIds.add(recipeId);
+            LOGGER.info("Successfully registered recipe from file: {}", recipeId);
+            return true;
 
         } catch (Exception e) {
             LOGGER.error("Error registering recipe from data: {}", recipeData.getRecipeId(), e);
@@ -437,10 +423,8 @@ public class RecipeRegisterManager {
             Item dishItem;
 
             if (recipeData.isWithBowl()) {
-
                 // 假设您有一个ModItems类来管理物品注册
                 dishItem = ForgeRegistries.ITEMS.getValue(
-
                         new ResourceLocation("your_mod_id", "nameless_dish_with_bowl")
                 );
             } else {
@@ -469,22 +453,6 @@ public class RecipeRegisterManager {
             return ItemStack.EMPTY;
         }
     }
-
-    /**
-     * 从文件重新加载并注册配方
-     */
-    public void reloadRecipesFromStorage() {
-        LOGGER.info("Reloading recipes from storage...");
-
-        // 清空当前注册
-        clearAllRegistrations();
-
-        // 重新加载并注册
-        loadAndRegisterSavedRecipes();
-
-        LOGGER.info("Recipe reload completed");
-    }
-
 
     /**
      * 处理待注册的配方队列
@@ -546,29 +514,7 @@ public class RecipeRegisterManager {
                 .replace("-", "")
                 .substring(0, 8);
 
-
         return new ResourceLocation("nameless_dishes", "autogen_" + hash);
-    }
-
-    /**
-     * 获取所有已注册的配方ID
-     */
-    public Set<String> getRegisteredRecipeIds() {
-        return Collections.unmodifiableSet(registeredRecipeIds);
-    }
-
-    /**
-     * 检查配方是否已注册
-     */
-    public boolean isRecipeRegistered(String recipeId) {
-        return registeredRecipeIds.contains(recipeId);
-    }
-
-    /**
-     * 检查配方是否已注册（通过ResourceLocation）
-     */
-    public boolean isRecipeRegistered(ResourceLocation recipeId) {
-        return recipeId != null && registeredRecipeIds.contains(recipeId.toString());
     }
 
     /**
@@ -584,52 +530,12 @@ public class RecipeRegisterManager {
 
         return deleted;
     }
-
-    /**
-     * 获取所有已注册的注册器信息（用于调试）
-     */
-    public Map<String, String> getRegisterInfo() {
-        Map<String, String> info = new LinkedHashMap<>();
-        info.put("Static registers count", String.valueOf(registerByBlockId.size()));
-        info.put("Dynamic registers count", String.valueOf(dynamicRegisters.size()));
-        info.put("Registered recipes", String.valueOf(registeredRecipeIds.size()));
-        info.put("Pending registrations", String.valueOf(pendingRegistrations.size()));
-        info.put("Initialized", String.valueOf(isInitialized));
-
-        for (Map.Entry<String, INamelessDishRecipeRegister> entry : registerByBlockId.entrySet()) {
-            info.put("Block: " + entry.getKey(), "Register: " + entry.getValue().getName());
-        }
-
-        for (INamelessDishRecipeRegister register : dynamicRegisters) {
-            info.put("Dynamic register", register.getName());
-        }
-
-        return info;
-    }
-
     /**
      * 获取存储管理器（用于高级操作）
      */
     public RecipeStorageManager getStorageManager() {
         return storageManager;
     }
-
-    /**
-     * 设置是否自动保存配方到文件
-     */
-    public void setAutoSaveEnabled(boolean enabled) {
-        this.autoSaveEnabled = enabled;
-        LOGGER.debug("Auto-save enabled: {}", enabled);
-    }
-
-    /**
-     * 设置是否自动从文件加载配方
-     */
-    public void setAutoLoadEnabled(boolean enabled) {
-        this.autoLoadEnabled = enabled;
-        LOGGER.debug("Auto-load enabled: {}", enabled);
-    }
-
     /**
      * 清空所有已注册的配方（用于重新加载）
      */
@@ -656,25 +562,4 @@ public class RecipeRegisterManager {
         LOGGER.info("Recipe reload completed");
     }
 
-    /**
-     * 导出配方统计数据
-     */
-    public Map<String, Object> exportStatistics() {
-        Map<String, Object> stats = new LinkedHashMap<>();
-
-        stats.put("total_registered_recipes", registeredRecipeIds.size());
-        stats.put("pending_registrations", pendingRegistrations.size());
-        stats.put("supported_blocks", registerByBlockId.size());
-        stats.put("dynamic_registers", dynamicRegisters.size());
-
-        // 按料理方块统计
-        Map<String, Integer> recipesByBlock = new HashMap<>();
-        for (String recipeId : registeredRecipeIds) {
-            // 从recipeId中提取信息或通过其他方式获取
-            // 这里简化处理，实际需要更复杂的逻辑
-        }
-        stats.put("recipes_by_block", recipesByBlock);
-
-        return stats;
-    }
 }
