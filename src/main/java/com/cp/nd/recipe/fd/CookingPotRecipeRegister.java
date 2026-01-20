@@ -10,6 +10,7 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import vectorwing.farmersdelight.client.recipebook.CookingPotRecipeBookTab;
 import vectorwing.farmersdelight.common.crafting.CookingPotRecipe;
 
 import javax.annotation.Nullable;
@@ -50,10 +51,8 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
      */
     @Override
     public void registerToGame(Recipe<?> recipe) {
-        if (recipe != null) {
-            // TODO: 实现具体的游戏配方注册逻辑
-            // 例如：ForgeRegistries.RECIPE_TYPES.register(recipe.getId(), recipe);
-            LOGGER.info("Registered Cooking Pot recipe: {}", recipe.getId());
+        if (recipe instanceof CookingPotRecipe cookingPotRecipe) {
+
         }
     }
 
@@ -91,7 +90,7 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
         return new CookingPotRecipe(
                 finalRecipeId,
                 "nameless_dishes",
-                null,
+                CookingPotRecipeBookTab.MISC,
                 ingredientList,
                 namelessDish.copy(),
                 container,

@@ -67,11 +67,8 @@ public class RecipeStorageManager {
 
             // 检查文件是否已存在（如果存在则添加时间戳）
             if (Files.exists(recipeFile)) {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
-                String timestamp = LocalDateTime.now().format(formatter);
-                fileName = recipeData.getRecipeId() + "_" + timestamp + ".json";
-                recipeFile = blockPath.resolve(fileName);
                 LOGGER.warn("Recipe file already exists, saving as: {}", fileName);
+                return false;
             }
 
             // 写入JSON文件
@@ -332,7 +329,7 @@ public class RecipeStorageManager {
         // 第一个下划线之前的部分是modid，之后是路径
         int firstUnderscore = dirName.indexOf("_");
         String modid = dirName.substring(0, firstUnderscore);
-        String path = dirName.substring(firstUnderscore + 1).replace("_", "/");
+        String path = dirName.substring(firstUnderscore + 1);
 
         return modid + ":" + path;
     }
@@ -353,35 +350,6 @@ public class RecipeStorageManager {
         }
     }
 
-    /**
-     * 获取所有已保存的料理方块ID
-     */
-    public Set<String> getSavedBlockIds() {
-        Set<String> blockIds = new HashSet<>();
-
-        try {
-            if (!Files.exists(baseStoragePath)) {
-                return blockIds;
-            }
-
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(baseStoragePath)) {
-                for (Path blockPath : stream) {
-                    if (Files.isDirectory(blockPath)) {
-                        String dirName = blockPath.getFileName().toString();
-                        String blockId = convertDirNameToBlockId(dirName);
-                        if (blockId != null) {
-                            blockIds.add(blockId);
-                        }
-                    }
-                }
-            }
-
-        } catch (IOException e) {
-            LOGGER.error("Failed to get saved block IDs", e);
-        }
-
-        return blockIds;
-    }
 
     /**
      * 清空缓存
@@ -392,10 +360,4 @@ public class RecipeStorageManager {
         LOGGER.debug("Cleared recipe cache");
     }
 
-    /**
-     * 获取基础存储路径（用于调试）
-     */
-    public Path getBaseStoragePath() {
-        return baseStoragePath;
-    }
 }

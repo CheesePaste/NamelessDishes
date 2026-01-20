@@ -1,13 +1,14 @@
 package com.cp.nd.recipe;
 
+import com.cp.nd.NamelessDishes;
 import com.cp.nd.api.INamelessDishRecipeRegister;
 import com.cp.nd.item.AbstractNamelessDishItem;
 import com.cp.nd.recipe.fd.CookingPotRecipeRegister;
 import com.cp.nd.recipe.storage.NamelessDishRecipeData;
 import com.cp.nd.recipe.storage.RecipeStorageManager;
+import com.cp.nd.util.FoodUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -266,12 +267,12 @@ public class RecipeRegisterManager {
     /**
      * 注册并保存配方到文件
      */
-    @Nullable
-    public ResourceLocation registerAndSaveRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
+    public void registerAndSaveRecipe(ItemStack namelessDish, @Nullable ResourceLocation recipeId) {
         if (registerRecipe(namelessDish, recipeId, true)) {
-            return recipeId != null ? recipeId : generateRecipeId(namelessDish);
+            if (recipeId == null) {
+                generateRecipeId(namelessDish);
+            }
         }
-        return null;
     }
 
     /**
@@ -417,36 +418,8 @@ public class RecipeRegisterManager {
                 LOGGER.error("No valid ingredients found for recipe: {}", recipeData.getRecipeId());
                 return ItemStack.EMPTY;
             }
+            return FoodUtil.createNamelessResult(recipeData.getCookingBlockId(),ingredients,recipeData.isWithBowl());
 
-            // 获取料理物品（需要根据是否有碗选择不同的物品）
-            // 这里需要根据您的Mod的物品注册来修改
-            Item dishItem;
-
-            if (recipeData.isWithBowl()) {
-                // 假设您有一个ModItems类来管理物品注册
-                dishItem = ForgeRegistries.ITEMS.getValue(
-                        new ResourceLocation("your_mod_id", "nameless_dish_with_bowl")
-                );
-            } else {
-                dishItem = ForgeRegistries.ITEMS.getValue(
-                        new ResourceLocation("your_mod_id", "nameless_dish")
-                );
-            }
-
-            if (dishItem == null) {
-                LOGGER.error("Dish item not found for recipe: {}", recipeData.getRecipeId());
-                return ItemStack.EMPTY;
-            }
-
-            // 使用AbstractNamelessDishItem的createDish方法创建
-            return AbstractNamelessDishItem.createDish(
-                    dishItem,
-                    recipeData.getFoodLevel(),
-                    recipeData.getSaturation(),
-                    ingredients,
-                    recipeData.isWithBowl(),
-                    recipeData.getCookingBlockId()
-            );
 
         } catch (Exception e) {
             LOGGER.error("Failed to create dish stack from recipe data", e);
@@ -514,7 +487,7 @@ public class RecipeRegisterManager {
                 .replace("-", "")
                 .substring(0, 8);
 
-        return new ResourceLocation("nameless_dishes", "autogen_" + hash);
+        return new ResourceLocation(NamelessDishes.MOD_ID, "autogen_" + hash);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.cp.nd.recipe.storage;
 
 import com.cp.nd.item.AbstractNamelessDishItem;
+import com.cp.nd.util.FoodUtil;
 import com.google.gson.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
@@ -9,8 +10,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -24,36 +23,21 @@ public class NamelessDishRecipeData {
     // 配方基本信息
     private final String recipeId;
     private final String cookingBlockId;
-    private final String outputItemId;
-    private final CompoundTag outputNbt;
-    private final int foodLevel;
-    private final float saturation;
     private final boolean withBowl;
 
     // 原料列表
     private final List<IngredientData> ingredients;
 
-    // 元数据
-    private final String creationTime;
-    private final String lastModified;
+    //提前给以后命名无名料理做预留
     private String displayName;
 
     public NamelessDishRecipeData(String recipeId, String cookingBlockId,
-                                  ItemStack output, List<IngredientData> ingredients,
-                                  int foodLevel, float saturation, boolean withBowl) {
+                                  List<IngredientData> ingredients, boolean withBowl) {
         this.recipeId = recipeId;
         this.cookingBlockId = cookingBlockId;
-        this.outputItemId = Objects.requireNonNull(ForgeRegistries.ITEMS.getKey(output.getItem())).toString();
-        this.outputNbt = output.getTag() != null ? output.getTag().copy() : new CompoundTag();
         this.ingredients = ingredients;
-        this.foodLevel = foodLevel;
-        this.saturation = saturation;
         this.withBowl = withBowl;
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String time = LocalDateTime.now().format(formatter);
-        this.creationTime = time;
-        this.lastModified = time;
     }
 
     /**
@@ -83,10 +67,7 @@ public class NamelessDishRecipeData {
         return new NamelessDishRecipeData(
                 finalRecipeId,
                 cookingBlockId,
-                dishStack,
                 ingredients,
-                AbstractNamelessDishItem.getFoodLevel(dishStack),
-                AbstractNamelessDishItem.getSaturation(dishStack),
                 AbstractNamelessDishItem.hasBowl(dishStack)
         );
     }
@@ -139,20 +120,7 @@ public class NamelessDishRecipeData {
         json.addProperty("recipe_id", recipeId);
         json.addProperty("cooking_block", cookingBlockId);
 
-        // 输出物品
-        JsonObject output = new JsonObject();
-        output.addProperty("item", outputItemId);
-        output.addProperty("count", 1);
-        if (outputNbt != null && !outputNbt.isEmpty()) {
-            output.addProperty("nbt", outputNbt.toString());
-        }
-        json.add("output", output);
 
-        // 食物属性
-        JsonObject foodProperties = new JsonObject();
-        foodProperties.addProperty("food_level", foodLevel);
-        foodProperties.addProperty("saturation", saturation);
-        json.add("food_properties", foodProperties);
 
         // 原料列表
         JsonArray ingredientsArray = new JsonArray();
@@ -166,9 +134,6 @@ public class NamelessDishRecipeData {
             json.addProperty("container", "minecraft:bowl");
         }
 
-        // 元数据
-        json.addProperty("creation_time", creationTime);
-        json.addProperty("last_modified", lastModified);
         if (displayName != null) {
             json.addProperty("display_name", displayName);
         }
@@ -192,25 +157,6 @@ public class NamelessDishRecipeData {
             String recipeId = json.get("recipe_id").getAsString();
             String cookingBlockId = json.get("cooking_block").getAsString();
 
-            // 解析输出物品
-            JsonObject outputJson = json.getAsJsonObject("output");
-            String outputItemId = outputJson.get("item").getAsString();
-            int count = outputJson.has("count") ? outputJson.get("count").getAsInt() : 1;
-
-            CompoundTag outputNbt = null;
-            if (outputJson.has("nbt")) {
-                try {
-                    outputNbt = TagParser.parseTag(outputJson.get("nbt").getAsString());
-                } catch (Exception e) {
-                    throw new JsonParseException("Failed to parse output NBT", e);
-                }
-            }
-
-            // 解析食物属性
-            JsonObject foodProps = json.getAsJsonObject("food_properties");
-            int foodLevel = foodProps.get("food_level").getAsInt();
-            float saturation = foodProps.get("saturation").getAsFloat();
-
             // 解析容器信息
             boolean withBowl = false;
             if (json.has("container")) {
@@ -226,23 +172,20 @@ public class NamelessDishRecipeData {
             }
 
             // 创建输出ItemStack
-            @SuppressWarnings("all")
-            ItemStack outputStack = new ItemStack(
-                    Objects.requireNonNull(ForgeRegistries.ITEMS.getValue(new ResourceLocation(outputItemId))),
-                    count
-            );
-            if (outputNbt != null && !outputNbt.isEmpty()) {
-                outputStack.setTag(outputNbt);
+            List<ItemStack> itemStacks=new ArrayList<>();
+            for(IngredientData data : ingredients)
+            {
+                itemStacks.add(data.createItemStack());
             }
+            @SuppressWarnings("all")
+            ItemStack outputStack = FoodUtil.createNamelessResult(cookingBlockId,itemStacks,withBowl);
+
 
             // 创建并返回配方数据
             NamelessDishRecipeData recipeData = new NamelessDishRecipeData(
                     recipeId,
                     cookingBlockId,
-                    outputStack,
                     ingredients,
-                    foodLevel,
-                    saturation,
                     withBowl
             );
 
@@ -263,32 +206,12 @@ public class NamelessDishRecipeData {
         this.displayName = displayName;
     }
 
-    // 添加getter方法
-    public String getDisplayName() {
-        return displayName;
-    }
 
-    // 添加获取输出ItemStack的方法
-    public ItemStack createOutputStack() {
-        @SuppressWarnings("all")
-        ItemStack stack = new ItemStack(
-                Objects.requireNonNull(ForgeRegistries.ITEMS.getValue(new ResourceLocation(outputItemId))),
-                1
-        );
-        if (outputNbt != null && !outputNbt.isEmpty()) {
-            stack.setTag(outputNbt.copy());
-        }
-        return stack;
-    }
 
     // Getter方法
     public String getRecipeId() { return recipeId; }
     public String getCookingBlockId() { return cookingBlockId; }
-    public String getOutputItemId() { return outputItemId; }
-    public CompoundTag getOutputNbt() { return outputNbt; }
     public List<IngredientData> getIngredients() { return ingredients; }
-    public int getFoodLevel() { return foodLevel; }
-    public float getSaturation() { return saturation; }
     public boolean isWithBowl() { return withBowl; }
 
     /**
@@ -358,9 +281,5 @@ public class NamelessDishRecipeData {
         }
 
 
-        public String getItemId() { return itemId; }
-        public int getCount() { return count; }
-        @Nullable
-        public CompoundTag getNbt() { return nbt; }
     }
 }

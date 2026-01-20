@@ -29,102 +29,11 @@ public class FarmersDelightHandler {
     private static final int INPUT_SLOT_START = 0;
     private static final int INPUT_SLOT_END = 5;
 
-    /// 检测配置是否允许无名料理合成
-    public boolean allowNamelessCrafting(Level level, BlockEntity blockEntity, List<ItemStack> inputs) {
-        if (!(blockEntity instanceof CookingPotBlockEntity cookingPot)) {
-            return false;
-        }
-
-        // 检查农夫乐事模组是否启用
-        if (!ModDetectionUtil.isModLoaded("farmersdelight")) {
-            return false;
-        }
-
-        // 检查配置是否启用
-        if (!NDConfig.INSTANCE.enabledMods.get().contains("farmersdelight")) {
-            return false;
-        }
-        if(!NDConfig.INSTANCE.cookingBlocks.get().contains("farmersdelight:cooking_pot"))
-        {
-            return false;
-        }
-
-        // 检查输入物品数量是否在允许范围内
-        int ingredientCount = getIngredientCount(inputs);
-        if (ingredientCount < NDConfig.INSTANCE.minIngredients.get() ||
-                ingredientCount > NDConfig.INSTANCE.maxIngredients.get()) {
-            return false;
-        }
-
-            if (!cookingPot.isHeated(level, cookingPot.getBlockPos())) {
-                return false;
-            }
-
-        // 检查是否有有效的输入
-        boolean hasInput = false;
-        for (int i = INPUT_SLOT_START; i <= INPUT_SLOT_END; i++) {
-            if (!cookingPot.getInventory().getStackInSlot(i).isEmpty()) {
-                hasInput = true;
-                break;
-            }
-        }
 
 
-        return hasInput;
-    }
-
-    /// 创建无名料理物品
-    private ItemStack createNamelessItemStack(double hunger, double saturation,
-                                              List<ItemStack> ingredients,
-                                              String cookingBlockId) { // 新增参数
-        // 传入料理方块ID
-
-        return AbstractNamelessDishItem.createDish(
-                ModItems.NAMELESS_DISH_WITH_BOWL.get(),
-                (int) hunger, (float) saturation, ingredients, true, cookingBlockId);
-    }
-
-    /// 生成无名料理
-    @Nonnull
-    public ItemStack createNamelessResult(Level level, BlockEntity blockEntity, List<ItemStack> inputs) {
-
-        // 计算饱食度和饱和度
-        float totalHunger = 0;
-        float totalSaturation = 0;
-        List<ItemStack> ingredientTypes = new ArrayList<>();
-
-        for (ItemStack input : inputs) {
-            if (!input.isEmpty()) {
-                if (input.isEdible()) {
-                    FoodProperties foodProperties = input.getFoodProperties(null);
-                    if (foodProperties != null) {
-                        totalHunger += foodProperties.getNutrition();
-                        totalSaturation += foodProperties.getSaturationModifier();
-                    }
-                }
-                ingredientTypes.add(input);
-            }
-        }
-
-        // 应用配置乘数
-        double baseHunger = totalHunger * (NDConfig.INSTANCE.baseHungerMultiplier.get() / 100.0f);
-        double baseSaturation = (totalSaturation * NDConfig.INSTANCE.baseSaturationMultiplier.get());
-
-        // 获取料理方块注册名
-        String cookingBlockId = null;
-        if (blockEntity != null) {
-            // 获取BlockEntityType的注册名
-            ResourceLocation blockEntityTypeId = BlockEntityType.getKey(blockEntity.getType());
-            if (blockEntityTypeId != null) {
-                cookingBlockId = blockEntityTypeId.toString(); // 例如: "farmersdelight:cooking_pot"
-            }
-        }
-
-        return createNamelessItemStack(baseHunger, baseSaturation, ingredientTypes, cookingBlockId);
-    }
 
     /// 进行烹饪操作。这个类负责生成无名料理，放入显示槽（提示“需要碗”的槽），显示槽消耗碗进入输出槽的逻辑在对应mixin
-    public boolean executeCooking(Level level, BlockEntity blockEntity, List<ItemStack> inputs, ItemStack result) {
+    public boolean executeCooking(Level level, BlockEntity blockEntity, ItemStack result) {
         if (!(blockEntity instanceof CookingPotBlockEntity cookingPot) || result.isEmpty()) {
             return false;
         }
@@ -209,6 +118,7 @@ public class FarmersDelightHandler {
             return false;
         }
     }
+
     private void testSave(ItemStack dishStack) {
         try {
             // 获取配方注册管理器
@@ -274,17 +184,6 @@ public class FarmersDelightHandler {
     }
 
 
-    /// 辅助方法
-
-    private int getIngredientCount(List<ItemStack> inputs) {
-        int count = 0;
-        for (ItemStack stack : inputs) {
-            if (!stack.isEmpty()) {
-                count++;
-            }
-        }
-        return count;
-    }
 
 
 

@@ -20,6 +20,9 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 请使用FoodUtil相关方法生成无名料理
+ */
 public abstract class AbstractNamelessDishItem extends Item {
 
     public static final String FOOD_LEVEL_KEY = "FoodLevel";

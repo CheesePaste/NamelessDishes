@@ -18,9 +18,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static com.cp.nd.util.FoodUtil.allowNamelessCrafting;
+import static com.cp.nd.util.FoodUtil.createNamelessResult;
+
 //注意，mixin一定要加入remap=false
 @Mixin(CookingPotBlockEntity.class)
 public abstract class CookingPotBlockEntityMixin {
+    @Unique
+    private final static String modName="farmersdelight";
+    @Unique
+    private final static String cookingBlockName="farmersdelight:cooking_pot";
     @Unique
     private final static int namelessDishes$cooktime =100;
 
@@ -65,7 +72,7 @@ public abstract class CookingPotBlockEntityMixin {
         }
 
         // 检查是否允许创建无名料理
-        if (!handler.allowNamelessCrafting(level, cookingPot, inputs)) {
+        if (!allowNamelessCrafting(level, cookingPot, inputs,modName,cookingBlockName)) {
             return;
         }
         ci.cancel();
@@ -76,13 +83,13 @@ public abstract class CookingPotBlockEntityMixin {
         if(accessor.farmersdelight$getCookTime()> accessor.farmersdelight$getCookTimeTotal())
         {
             // 创建无名料理
-            ItemStack namelessResult = handler.createNamelessResult(level, cookingPot, inputs);
+            ItemStack namelessResult = createNamelessResult(cookingPot, inputs,true);
             if (namelessResult.isEmpty()) {
                 //这个if里面基本不可能触发，不用考虑是这里卡住
                 return;
             }
             //executeCooking负责在展示槽生成无名料理，展示槽是“需要碗”提示的那个槽
-            boolean success = handler.executeCooking(level, cookingPot, inputs, namelessResult);
+            boolean success = handler.executeCooking(level, cookingPot,namelessResult);
             if(success) {
                 accessor.farmersdelight$setCookTime(0);
                 accessor.farmersdelight$setCookTimeTotal(0);
