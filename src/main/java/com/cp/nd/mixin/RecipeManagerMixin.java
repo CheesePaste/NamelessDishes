@@ -19,6 +19,13 @@ import java.util.Map;
 @Mixin(RecipeManager.class)
 public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
 
+    // 在RecipeManagerMixin.java中添加
+    @Inject(method = "replaceRecipes", at = @At("HEAD"))
+    public void onReplaceRecipes(Iterable<Recipe<?>> recipes, CallbackInfo ci) {
+        System.out.println("[MIXIN] RecipeManager.replaceRecipes被调用，配方列表被替换");
+        namelessDishes$ensureMutable(); // 确保可变
+    }
+
     @Shadow
     private Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> recipes;
 
@@ -32,14 +39,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
         RecipeType<?> recipeType = recipe.getType();
 
         // 确保Map是可变的
-        ensureMutable();
+        namelessDishes$ensureMutable();
 
         // 添加到type-specific map
-        Map<ResourceLocation, Recipe<?>> typeMap = this.recipes.get(recipeType);
-        if (typeMap == null) {
-            typeMap = new HashMap<>();
-            this.recipes.put(recipeType, typeMap);
-        }
+        Map<ResourceLocation, Recipe<?>> typeMap = this.recipes.computeIfAbsent(recipeType, k -> new HashMap<>());
 
         // 添加新配方
         typeMap.put(recipeId, recipe);
@@ -51,7 +54,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
     @Unique
     @Override
     public boolean removeRecipe(ResourceLocation recipeId) {
-        ensureMutable();
+        namelessDishes$ensureMutable();
 
         // 从byName中移除
         Recipe<?> removed = this.byName.remove(recipeId);
@@ -76,7 +79,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
 
     @Unique
     @SuppressWarnings("unchecked")
-    private void ensureMutable() {
+    private void namelessDishes$ensureMutable() {
         // 将ImmutableMap转换为可变Map
         if (this.recipes != null && !(this.recipes instanceof HashMap)) {
             Map<RecipeType<?>, Map<ResourceLocation, Recipe<?>>> mutableRecipes = new HashMap<>();
@@ -101,6 +104,6 @@ public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
                              net.minecraft.util.profiling.ProfilerFiller p_44039_,
                              CallbackInfo ci) {
         // 确保reload前maps是可变的（如果需要）
-        ensureMutable();
+        namelessDishes$ensureMutable();
     }
 }
