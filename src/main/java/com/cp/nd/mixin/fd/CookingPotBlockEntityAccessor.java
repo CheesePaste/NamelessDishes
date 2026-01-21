@@ -39,10 +39,4 @@ public interface CookingPotBlockEntityAccessor {
     @Invoker(value = "useStoredContainersOnMeal",remap = false)
     void farmersdelight$useStoredContainerOnMeal();
 
-    @Invoker(value = "moveMealToOutput",remap = false)
-    void farmersdelight$moveMealToOutput();
-
-    @Invoker(value = "doesMealHaveContainer",remap = false)
-    boolean farmersdelight$doesMealHaveContainer(ItemStack itemStack);
-
 }
