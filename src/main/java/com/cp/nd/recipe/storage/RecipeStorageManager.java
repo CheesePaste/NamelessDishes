@@ -52,6 +52,27 @@ public class RecipeStorageManager {
     /**
      * 保存配方到文件
      */
+    public void saveRecipeToFile(ItemStack namelessDish, ResourceLocation recipeId) {
+        try {
+            NamelessDishRecipeData recipeData = NamelessDishRecipeData.fromItemStack(
+                    namelessDish,
+                    recipeId.toString()
+            );
+
+            boolean saved = saveRecipe(recipeData);
+
+            if (saved) {
+                LOGGER.debug("Successfully saved recipe {} to file", recipeId);
+            } else {
+                LOGGER.warn("Failed to save recipe {} to file", recipeId);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error saving recipe to file: {}", recipeId, e);
+        }
+    }
+    /**
+     * 保存配方到文件
+     */
     public boolean saveRecipe(NamelessDishRecipeData recipeData) {
         try {
             // 获取料理方块对应的存储路径

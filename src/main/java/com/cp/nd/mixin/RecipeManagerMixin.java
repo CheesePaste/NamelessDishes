@@ -1,7 +1,7 @@
 // RecipeManagerMixin.java
 package com.cp.nd.mixin;
 
-import com.cp.nd.item.IRecipeManagerMixin;
+import com.cp.nd.recipe.IRecipeManagerMixin;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;

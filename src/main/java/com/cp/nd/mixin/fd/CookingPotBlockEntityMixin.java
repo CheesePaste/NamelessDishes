@@ -101,10 +101,7 @@ public abstract class CookingPotBlockEntityMixin {
         //这里是将展示槽的物品挪入输出槽，在展示槽创建无名料理使用handler的execute'Cooking实现
         ItemStack mealStack = cookingPot.getMeal();
         if (!mealStack.isEmpty()) {
-            if (!accessor.farmersdelight$doesMealHaveContainer(mealStack)) {
-                accessor.farmersdelight$moveMealToOutput();
-                didInventoryChange = true;
-            } else if (!accessor.farmersdelight$getInventory().getStackInSlot(7).isEmpty()) {
+            if (!accessor.farmersdelight$getInventory().getStackInSlot(7).isEmpty()) {
                 accessor.farmersdelight$useStoredContainerOnMeal();
                 didInventoryChange = true;
             }

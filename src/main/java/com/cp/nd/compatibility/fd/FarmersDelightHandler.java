@@ -110,7 +110,6 @@ public class FarmersDelightHandler {
                         3
                 );
             }
-            testSave(finalResult);
 
             return true;
         } catch (Exception e) {
@@ -119,31 +118,6 @@ public class FarmersDelightHandler {
         }
     }
 
-    private void testSave(ItemStack dishStack) {
-        try {
-            // 获取配方注册管理器
-            RecipeRegisterManager recipeManager = RecipeRegisterManager.getInstance();
-
-            // 从ItemStack创建配方数据
-            NamelessDishRecipeData recipeData = NamelessDishRecipeData.fromItemStack(dishStack, null);
-
-            // 获取存储管理器并保存
-            RecipeStorageManager storageManager = recipeManager.getStorageManager();
-            boolean saved = storageManager.saveRecipe(recipeData);
-
-            if (saved) {
-                NamelessDishes.LOGGER.info("Recipe saved to file: {}", recipeData.getRecipeId());
-
-                    recipeManager.registerAndSaveRecipe(dishStack, null);
-                    NamelessDishes.LOGGER.info("Test mode: Recipe also registered to game");
-            } else {
-                NamelessDishes.LOGGER.warn("Failed to save recipe to file");
-            }
-
-        } catch (Exception e) {
-            NamelessDishes.LOGGER.error("Error saving recipe to file", e);
-        }
-    }
 
 
     /// 辅助方法：处理剩余物品
