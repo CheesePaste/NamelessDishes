@@ -1,0 +1,329 @@
+
+╭─── Claude Code v2.1.12 ──────────────────────────────────────────────────────╮
+│                                               │ Tips for getting started     │
+│                 Welcome back!                 │ Run /init to create a CLAUD… │
+│                                               │ ──────────────────────────── │
+│                   ▗ ▗   ▖ ▖                   │ Recent activity              │
+│                                               │ No recent activity           │
+│                     ▘▘ ▝▝                     │                              │
+│                                               │                              │
+│        Sonnet 4.5 · API Usage Billing         │                              │
+│   ~/Documents/Projects/TEMP/JustEnoughItems   │                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  /model to try Opus 4.5
+
+❯ 详细阅读源码，了解他是怎么抓取所有的配方的 
+
+⏺ 我会帮你详细分析 JEI 的配方抓取机制。让我先探索代码库的结构。
+
+⏺ Explore(探索JEI配方抓取机制)
+  ⎿  Done (50 tool uses · 0 tokens · 2m 53s)                             
+
+
+⏺ 让我再深入查看一些核心源码文件，展示具体的实现细节：
+
+⏺ Read(Library/src/main/java/mezz/jei/library/plugins/vanilla/VanillaPlugin.java
+      )
+  ⎿  Read 362 lines
+
+⏺ Read(Library/src/main/java/mezz/jei/library/plugins/vanilla/crafting/VanillaRe
+      cipes.java)
+  ⎿  Read 101 lines
+
+⏺ Read(Library/src/main/java/mezz/jei/library/recipes/RecipeManagerInternal.java
+      )
+  ⎿  Read 304 lines
+
+⏺ 让我再查看插件发现和注册流程的关键代码：
+
+⏺ Read(Library/src/main/java/mezz/jei/library/startup/PluginLoader.java)
+  ⎿  Error reading file
+
+⏺ Read(Library/src/main/java/mezz/jei/library/recipes/collect/RecipeMap.java)
+  ⎿  Read 101 lines
+
+⏺ Search(pattern: "**/PluginLoader.java")
+  ⎿  Found 1 file (ctrl+o to expand)
+
+⏺ Read(Library/src/main/java/mezz/jei/library/load/PluginLoader.java)
+  ⎿  Read 189 lines
+
+⏺ 完美！现在我已经详细阅读了核心源码。让我为你总结 JEI 配方抓取的完整机制：
+
+  🔍 JEI 配方抓取完整流程分析
+
+  核心流程概览
+
+  启动阶段 → 插件发现 → 配方注册 → 数据存储 → 查询使用
+
+  ---
+  1. 启动与插件发现
+
+  入口点：JeiStarter
+
+  - JEI 在游戏启动时初始化
+  - 通过 PluginLoader.createRecipeManager() 创建配方管理器
+
+  插件发现机制：
+
+  VanillaPlugin (VanillaPlugin.java:125) 使用 @JeiPlugin 注解：
+  @JeiPlugin
+  public class VanillaPlugin implements IModPlugin {
+      @Override
+      public ResourceLocation getPluginUid() {
+          return new ResourceLocation(ModIds.JEI_ID, "minecraft");
+      }
+  }
+
+  JEI 会扫描所有模组的 @JeiPlugin 注解类，通过 PluginCaller.callOnPlugins() 统一调用所有插件的注册方法。
+
+  ---
+  2. 配方分类注册
+
+  PluginLoader.createRecipeCategories() (PluginLoader.java:117-127)
+
+  RecipeCategoryRegistration recipeCategoryRegistration = new RecipeCategoryRegistration(jeiHelpers);
+  PluginCaller.callOnPlugins("Registering categories", plugins,
+      p -> p.registerCategories(recipeCategoryRegistration));
+
+  VanillaPlugin 注册的所有配方类型：
+
+  - CraftingRecipeCategory - 合成配方（工作台）
+  - StoneCuttingRecipeCategory - 切石机配方
+  - FurnaceSmeltingCategory - 熔炉配方
+  - SmokingCategory - 烟熏炉配方
+  - BlastingCategory - 高炉配方
+  - CampfireCookingCategory - 营火烹饪配方
+  - SmithingRecipeCategory - 锻造台配方
+  - CompostableRecipeCategory - 堆肥配方
+  - FurnaceFuelCategory - 燃料配方
+  - BrewingRecipeCategory - 酿造配方
+  - AnvilRecipeCategory - 铁砧配方
+
+  ---
+  3. 配方抓取核心逻辑
+
+  VanillaPlugin.registerRecipes() (VanillaPlugin.java:222-259)
+
+  这是配方抓取的核心入口：
+
+  @Override
+  public void registerRecipes(IRecipeRegistration registration) {
+      // 创建 VanillaRecipes 实例
+      VanillaRecipes vanillaRecipes = new VanillaRecipes(ingredientManager);
+
+      // 获取合成配方
+      Map<Boolean, List<CraftingRecipe>> craftingRecipes =
+          vanillaRecipes.getCraftingRecipes(craftingCategory);
+
+      // 注册各种配方类型
+      registration.addRecipes(RecipeTypes.CRAFTING, handledCraftingRecipes);
+      registration.addRecipes(RecipeTypes.CRAFTING, specialCraftingRecipes);
+      registration.addRecipes(RecipeTypes.STONECUTTING, vanillaRecipes.getStonecuttingRecipes(...));
+      registration.addRecipes(RecipeTypes.SMELTING, vanillaRecipes.getFurnaceRecipes(...));
+      registration.addRecipes(RecipeTypes.SMOKING, vanillaRecipes.getSmokingRecipes(...));
+      registration.addRecipes(RecipeTypes.BLASTING, vanillaRecipes.getBlastingRecipes(...));
+      registration.addRecipes(RecipeTypes.CAMPFIRE_COOKING, vanillaRecipes.getCampfireCookingRecipes(...));
+      registration.addRecipes(RecipeTypes.FUELING, FuelRecipeMaker.getFuelRecipes(...));
+      registration.addRecipes(RecipeTypes.ANVIL, AnvilRecipeMaker.getAnvilRecipes(...));
+      registration.addRecipes(RecipeTypes.SMITHING, vanillaRecipes.getSmithingRecipes(...));
+      registration.addRecipes(RecipeTypes.COMPOSTING, CompostingRecipeMaker.getRecipes(...));
+      registration.addRecipes(RecipeTypes.BREWING, brewingRecipes);
+  }
+
+  ---
+  4. 从 Minecraft 获取配方
+
+  VanillaRecipes 构造函数 (VanillaRecipes.java:28-35)
+
+  关键：直接从 Minecraft 的 RecipeManager 获取！
+
+  public VanillaRecipes(IIngredientManager ingredientManager) {
+      Minecraft minecraft = Minecraft.getInstance();
+      ClientLevel world = minecraft.level;
+      this.recipeManager = world.getRecipeManager();  // ← 核心！获取 MC 的配方管理器
+      this.ingredientManager = ingredientManager;
+  }
+
+  获取合成配方示例 (VanillaRecipes.java:37-57)
+
+  public Map<Boolean, List<CraftingRecipe>> getCraftingRecipes(IRecipeCategory<CraftingRecipe> craftingCategory) {
+      var validator = new CategoryRecipeValidator<>(craftingCategory, ingredientManager, 9);
+
+      List<CraftingRecipe> handled = new ArrayList<>();
+      List<CraftingRecipe> unhandled = new ArrayList<>();
+
+      // 直接从 Minecraft RecipeManager 获取所有合成配方
+      List<CraftingRecipe> allRecipes = recipeManager.getAllRecipesFor(RecipeType.CRAFTING);
+
+      for (CraftingRecipe recipe : allRecipes) {
+          if (validator.isRecipeValid(recipe)) {
+              if (validator.isRecipeHandled(recipe)) {
+                  handled.add(recipe);
+              } else {
+                  unhandled.add(recipe);
+              }
+          }
+      }
+      return Map.of(true, handled, false, unhandled);
+  }
+
+  其他配方类型的获取（VanillaRecipes.java:59-98）
+
+  // 统一模式：调用 recipeManager.getAllRecipesFor(RecipeType.XXX)
+  public List<StonecutterRecipe> getStonecuttingRecipes(...) {
+      return getValidHandledRecipes(recipeManager, RecipeType.STONECUTTING, validator);
+  }
+
+  public List<SmeltingRecipe> getFurnaceRecipes(...) {
+      return getValidHandledRecipes(recipeManager, RecipeType.SMELTING, validator);
+  }
+
+  private static <C extends Container, T extends Recipe<C>> List<T> getValidHandledRecipes(
+      RecipeManager recipeManager,
+      RecipeType<T> recipeType,
+      CategoryRecipeValidator<T> validator
+  ) {
+      return recipeManager.getAllRecipesFor(recipeType)  // ← 核心 API 调用
+          .stream()
+          .filter(r -> validator.isRecipeValid(r) && validator.isRecipeHandled(r))
+          .toList();
+  }
+
+  ---
+  5. 配方数据存储
+
+  RecipeManagerInternal.addRecipe() (RecipeManagerInternal.java:132-163)
+
+  配方添加的核心逻辑：
+
+  private <T> boolean addRecipe(IRecipeCategory<T> recipeCategory, T recipe, Set<T> hiddenRecipes) {
+      // 1. 检查是否被隐藏
+      if (hiddenRecipes.contains(recipe)) {
+          return false;
+      }
+
+      // 2. 检查分类是否能处理
+      if (!recipeCategory.isHandled(recipe)) {
+          return false;
+      }
+
+      // 3. 获取配方的所有原料
+      IIngredientSupplier ingredientSupplier =
+          IngredientSupplierHelper.getIngredientSupplier(recipe, recipeCategory, ingredientManager);
+
+      // 4. 添加到所有 RecipeMap（输入、输出、催化器）
+      for (RecipeMap recipeMap : recipeMaps.values()) {
+          recipeMap.addRecipe(recipeType, recipe, ingredientSupplier);
+      }
+      return true;
+  }
+
+  RecipeMap - 高效索引存储 (RecipeMap.java:28-100)
+
+  核心数据结构：
+  public class RecipeMap {
+      // 配方表：recipeType + ingredientUid → recipes
+      private final RecipeIngredientTable recipeTable = new RecipeIngredientTable();
+
+      // 原料 UID → 配方类型映射（用于反向查找）
+      private final Multimap<Object, RecipeType<?>> ingredientUidToCategoryMap;
+
+      // 催化器映射
+      private final Multimap<Object, RecipeType<?>> categoryCatalystUidToRecipeCategoryMap;
+
+      public <T> void addRecipe(RecipeType<T> recipeType, T recipe, IIngredientSupplier ingredientSupplier) {
+          Set<Object> ingredientUids = new HashSet<>();
+          Collection<ITypedIngredient<?>> ingredients = ingredientSupplier.getIngredients(this.role);
+
+          // 收集所有原料的 UID
+          for (ITypedIngredient<?> ingredient : ingredients) {
+              Object ingredientUid = getIngredientUid(ingredient);
+              ingredientUids.add(ingredientUid);
+          }
+
+          // 建立双向索引
+          if (!ingredientUids.isEmpty()) {
+              for (Object ingredientUid : ingredientUids) {
+                  ingredientUidToCategoryMap.put(ingredientUid, recipeType);
+              }
+              recipeTable.add(recipe, recipeType, ingredientUids);
+          }
+      }
+  }
+
+  ---
+  6. 配方查询流程
+
+  RecipeManagerInternal.getRecipesStream() (RecipeManagerInternal.java:240-243)
+
+  public <T> Stream<T> getRecipesStream(RecipeType<T> recipeType, IFocusGroup focuses, boolean includeHidden) {
+      RecipeTypeData<T> recipeTypeData = this.recipeTypeDataMap.get(recipeType);
+      return this.pluginManager.getRecipes(recipeTypeData, focuses, includeHidden);
+  }
+
+  RecipeMap.getRecipes() (RecipeMap.java:56-59)
+
+  @UnmodifiableView
+  public <T> List<T> getRecipes(RecipeType<T> recipeType, ITypedIngredient<?> ingredient) {
+      Object ingredientUid = getIngredientUid(ingredient);
+      return recipeTable.get(recipeType, ingredientUid);  // O(1) 查询
+  }
+
+  ---
+  7. 完整调用链总结
+
+  游戏启动
+    ↓
+  JeiStarter.start()
+    ↓
+  PluginLoader.createRecipeManager()
+    ↓
+  PluginLoader.createRecipeCategories()  // 注册配方分类
+    ↓
+  PluginLoader: registerRecipeCatalysts()  // 注册催化器
+    ↓
+  RecipeManagerInternal 创建  // 初始化 RecipeMap
+    ↓
+  PluginLoader: registerRecipes()
+    ↓
+  VanillaPlugin.registerRecipes()
+    ↓
+  VanillaRecipes.{getCraftingRecipes, getFurnaceRecipes, ...}()
+    ↓
+  recipeManager.getAllRecipesFor(RecipeType.XXX)  // 从 MC 获取配方
+    ↓
+  RecipeManagerInternal.addRecipes()
+    ↓
+  RecipeMap.addRecipe()  // 存储到索引
+    ↓
+  RecipeManagerInternal.compact()  // 优化存储
+    ↓
+  完成！准备查询
+
+  ---
+  关键设计特点
+
+  1. 直接从 Minecraft 获取：使用 world.getRecipeManager().getAllRecipesFor() 直接获取 MC 的配方
+  2. 高效索引结构：RecipeMap 使用多级映射实现 O(1) 查询
+  3. 分类管理：每个配方类型由 IRecipeCategory 独立管理
+  4. 插件系统：模组可通过 @JeiPlugin 注册自己的配方
+  5. 双向索引：原料→配方、配方→原料，支持灵活查询
+  6. 特殊配方处理：某些特殊配方（如药水箭、潜影盒染色）会被替换为 JEI 可理解的形式
+
+  ---
+  文件位置参考
+
+  - 核心入口：Library/src/main/java/mezz/jei/library/plugins/vanilla/VanillaPlugin.java:222
+  - 配方获取：Library/src/main/java/mezz/jei/library/plugins/vanilla/crafting/VanillaRecipes.java:28
+  - 存储管理：Library/src/main/java/mezz/jei/library/recipes/RecipeManagerInternal.java:132
+  - 索引结构：Library/src/main/java/mezz/jei/library/recipes/collect/RecipeMap.java:67
+  - 加载流程：Library/src/main/java/mezz/jei/library/load/PluginLoader.java:147
+
+  这就是 JEI 完整的配方抓取机制！🎯
+
+✻ Sautéed for 5m 20s
+
+
+
