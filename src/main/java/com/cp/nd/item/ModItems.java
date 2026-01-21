@@ -3,6 +3,7 @@ package com.cp.nd.item;
 import com.cp.nd.NamelessDishes;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -22,7 +23,6 @@ public class ModItems {
                             .food(new FoodProperties.Builder()
                                     .nutrition(0) // 动态设置
                                     .saturationMod(0)
-                                    .alwaysEat()
                                     .build())
             )
     );
@@ -32,11 +32,10 @@ public class ModItems {
             "nameless_dish",
             () -> new NamelessDishItem(
                     new Item.Properties()
-                            .stacksTo(64) // 不带碗的可以堆叠
+                            .stacksTo(64)
                             .food(new FoodProperties.Builder()
                                     .nutrition(0) // 动态设置
                                     .saturationMod(0)
-                                    .alwaysEat()
                                     .build())
             )
     );

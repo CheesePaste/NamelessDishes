@@ -118,29 +118,27 @@ public abstract class AbstractNamelessDishItem extends Item {
             return new FoodProperties.Builder()
                     .nutrition(foodLevel)
                     .saturationMod(saturation)
-                    .alwaysEat()
                     .build();
         }
         return super.getFoodProperties(stack, entity);
     }
 
     public static ItemStack createDish(Item dishItem, int foodLevel, float saturation,
-                                       List<ItemStack> ingredients, boolean withBowl,
+                                       List<ItemStack> ingredients,
                                        @Nullable String cookingBlockId) {
         ItemStack stack = new ItemStack(dishItem);
-        setDishData(stack, foodLevel, saturation, ingredients, withBowl, cookingBlockId);
+        setDishData(stack, foodLevel, saturation, ingredients, cookingBlockId);
         return stack;
     }
 
     public static void setDishData(ItemStack stack, int foodLevel, float saturation,
-                                   List<ItemStack> ingredients, boolean withBowl,
+                                   List<ItemStack> ingredients,
                                    @Nullable String cookingBlockId) {
         CompoundTag tag = stack.getOrCreateTag();
 
         // 设置基础属性
         tag.putInt(FOOD_LEVEL_KEY, foodLevel);
         tag.putFloat(SATURATION_KEY, saturation);
-        tag.putBoolean("WithBowl", withBowl);
 
         // 保存料理方块信息
         if (cookingBlockId != null && !cookingBlockId.isEmpty()) {
@@ -153,7 +151,6 @@ public abstract class AbstractNamelessDishItem extends Item {
             if (!ingredient.isEmpty()) {
                 CompoundTag ingredientTag = new CompoundTag();
                 ItemStack singleItem = ingredient.copy();
-                singleItem.setCount(1);
                 singleItem.save(ingredientTag);
                 ingredientsList.add(ingredientTag);
             }
@@ -198,12 +195,40 @@ public abstract class AbstractNamelessDishItem extends Item {
         return ingredients;
     }
 
-    public static boolean hasBowl(ItemStack stack) {
-        CompoundTag tag = stack.getTag();
-        return tag != null && tag.getBoolean("WithBowl");
+    public static boolean hasContainer(ItemStack stack) {
+        if(stack.getItem() instanceof AbstractNamelessDishItem nd)
+        {
+            return nd.getContainerItem()!=ItemStack.EMPTY;
+        }
+        return false;
     }
 
     public ItemStack getContainerItem() {
         return ItemStack.EMPTY;
+    }
+
+    @Override
+    public @NotNull ItemStack finishUsingItem(@NotNull ItemStack stack, @NotNull Level level, @NotNull LivingEntity entity) {
+        // 先获取是否有碗
+        boolean hasContainer = hasContainer(stack);
+
+        // 调用父类方法完成食用
+        ItemStack result = super.finishUsingItem(stack, level, entity);
+
+        // 如果有碗，返回碗作为容器物品
+        if (hasContainer && !level.isClientSide) {
+            ItemStack container = this.getContainerItem();
+            if (!container.isEmpty()) {
+                // 如果玩家正在使用物品，则将碗添加到玩家的物品栏或掉落
+                if (entity instanceof net.minecraft.world.entity.player.Player player) {
+                    if (!player.getInventory().add(container)) {
+                        player.drop(container, false);
+                    }
+                }
+            }
+        }
+
+        // 返回处理后的物品堆（通常是空的，因为食物被消耗了）
+        return result;
     }
 }

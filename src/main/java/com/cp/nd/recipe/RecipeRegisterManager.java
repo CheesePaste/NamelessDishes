@@ -284,11 +284,6 @@ public class RecipeRegisterManager {
             hashBuilder.append(cookingBlockId.replace(":", "_"));
         }
 
-        // 添加容器信息
-        if (AbstractNamelessDishItem.hasBowl(namelessDish)) {
-            hashBuilder.append("_bowl");
-        }
-
         // 生成UUID并取前8位
         String hash = UUID.nameUUIDFromBytes(hashBuilder.toString().getBytes()).toString()
                 .replace("-", "")
@@ -316,7 +311,7 @@ public class RecipeRegisterManager {
                 LOGGER.error("No valid ingredients found for recipe: {}", recipeData.getRecipeId());
                 return ItemStack.EMPTY;
             }
-            return createNamelessResult(recipeData.getCookingBlockId(),ingredients,recipeData.isWithBowl());
+            return createNamelessResult(recipeData.getCookingBlockId(),ingredients,recipeData.getContainerId());
 
 
         } catch (Exception e) {

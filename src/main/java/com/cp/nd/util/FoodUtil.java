@@ -24,7 +24,7 @@ public class FoodUtil {
     static Logger LOGGER= LogManager.getLogger(FoodUtil.class);
     /// 生成无名料理
     @Nonnull
-    public static ItemStack createNamelessResult(BlockEntity blockEntity, List<ItemStack> inputs, boolean withbowl) {
+    public static ItemStack createNamelessResult(BlockEntity blockEntity, List<ItemStack> inputs,String containerId) {
 
         float totalHunger = 0;
         float totalSaturation = 0;
@@ -57,22 +57,26 @@ public class FoodUtil {
             }
         }
 
-        if(withbowl) {
+
+        for(int i=0;i<100;i++) {
+            LOGGER.info(containerId);
+        }
+        switch (containerId) {
+            case "bowl":
+            case"minecraft:bowl":
             return AbstractNamelessDishItem.createDish(
                     ModItems.NAMELESS_DISH_WITH_BOWL.get(),
-                    (int) baseHunger, (float) baseSaturation, ingredientTypes, true, cookingBlockId);
-        }
-        else
-        {
+                    (int) baseHunger, (float) baseSaturation, ingredientTypes, cookingBlockId);
+            default:
             return AbstractNamelessDishItem.createDish(
                     ModItems.NAMELESS_DISH.get(),
-                    (int) baseHunger, (float) baseSaturation, ingredientTypes, false, cookingBlockId);
+                    (int) baseHunger, (float) baseSaturation, ingredientTypes,  cookingBlockId);
         }
     }
 
     /// 生成无名料理
     @Nonnull
-    public static ItemStack createNamelessResult(String cookingBlockId, List<ItemStack> inputs, boolean withbowl) {
+    public static ItemStack createNamelessResult(String cookingBlockId, List<ItemStack> inputs, String containerId) {
 
         // 计算饱食度和饱和度
         float totalHunger = 0;
@@ -97,16 +101,16 @@ public class FoodUtil {
         double baseSaturation = (totalSaturation * NDConfig.INSTANCE.baseSaturationMultiplier.get());
 
 
-        if(withbowl) {
-            return AbstractNamelessDishItem.createDish(
-                    ModItems.NAMELESS_DISH_WITH_BOWL.get(),
-                    (int) baseHunger, (float) baseSaturation, ingredientTypes, true, cookingBlockId);
-        }
-        else
-        {
-            return AbstractNamelessDishItem.createDish(
-                    ModItems.NAMELESS_DISH.get(),
-                    (int) baseHunger, (float) baseSaturation, ingredientTypes, false, cookingBlockId);
+        switch (containerId) {
+            case "bowl":
+            case "minecraft:bowl":
+                return AbstractNamelessDishItem.createDish(
+                        ModItems.NAMELESS_DISH_WITH_BOWL.get(),
+                        (int) baseHunger, (float) baseSaturation, ingredientTypes,  cookingBlockId);
+            default:
+                return AbstractNamelessDishItem.createDish(
+                        ModItems.NAMELESS_DISH.get(),
+                        (int) baseHunger, (float) baseSaturation, ingredientTypes, cookingBlockId);
         }
     }
 

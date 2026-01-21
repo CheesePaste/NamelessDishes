@@ -17,4 +17,5 @@ public class NamelessDishWithBowlItem extends AbstractNamelessDishItem {
         // 食用后返回碗
         return new ItemStack(Items.BOWL);
     }
+
 }

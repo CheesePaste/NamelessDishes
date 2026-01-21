@@ -23,7 +23,7 @@ public class NamelessDishRecipeData {
     // 配方基本信息
     private final String recipeId;
     private final String cookingBlockId;
-    private final boolean withBowl;
+    private final String containerId;
 
     // 原料列表
     private final List<IngredientData> ingredients;
@@ -32,11 +32,11 @@ public class NamelessDishRecipeData {
     private String displayName;
 
     public NamelessDishRecipeData(String recipeId, String cookingBlockId,
-                                  List<IngredientData> ingredients, boolean withBowl) {
+                                  List<IngredientData> ingredients, String containerId) {
         this.recipeId = recipeId;
         this.cookingBlockId = cookingBlockId;
         this.ingredients = ingredients;
-        this.withBowl = withBowl;
+        this.containerId=containerId;
 
     }
 
@@ -68,7 +68,7 @@ public class NamelessDishRecipeData {
                 finalRecipeId,
                 cookingBlockId,
                 ingredients,
-                AbstractNamelessDishItem.hasBowl(dishStack)
+                ((AbstractNamelessDishItem) dishStack.getItem()).getContainerItem().getItem().toString()
         );
     }
 
@@ -100,10 +100,6 @@ public class NamelessDishRecipeData {
             hashBuilder.append(cookingBlockId.replace(":", "_"));
         }
 
-        // 添加容器信息
-        if (AbstractNamelessDishItem.hasBowl(dishStack)) {
-            hashBuilder.append("_bowl");
-        }
 
         // 生成UUID并取前8位
         String hash = UUID.nameUUIDFromBytes(hashBuilder.toString().getBytes()).toString();
@@ -129,10 +125,7 @@ public class NamelessDishRecipeData {
         }
         json.add("ingredients", ingredientsArray);
 
-        // 容器信息
-        if (withBowl) {
-            json.addProperty("container", "minecraft:bowl");
-        }
+        json.addProperty("container", containerId);
 
         if (displayName != null) {
             json.addProperty("display_name", displayName);
@@ -157,12 +150,7 @@ public class NamelessDishRecipeData {
             String recipeId = json.get("recipe_id").getAsString();
             String cookingBlockId = json.get("cooking_block").getAsString();
 
-            // 解析容器信息
-            boolean withBowl = false;
-            if (json.has("container")) {
-                String container = json.get("container").getAsString();
-                withBowl = container.equals("minecraft:bowl");
-            }
+            String containerId= json.get("container").getAsString();
 
             // 解析原料列表
             List<IngredientData> ingredients = new ArrayList<>();
@@ -178,7 +166,7 @@ public class NamelessDishRecipeData {
                 itemStacks.add(data.createItemStack());
             }
             @SuppressWarnings("all")
-            ItemStack outputStack = FoodUtil.createNamelessResult(cookingBlockId,itemStacks,withBowl);
+            ItemStack outputStack = FoodUtil.createNamelessResult(cookingBlockId,itemStacks,containerId);
 
 
             // 创建并返回配方数据
@@ -186,7 +174,7 @@ public class NamelessDishRecipeData {
                     recipeId,
                     cookingBlockId,
                     ingredients,
-                    withBowl
+                    containerId
             );
 
             // 设置显示名称
@@ -212,7 +200,7 @@ public class NamelessDishRecipeData {
     public String getRecipeId() { return recipeId; }
     public String getCookingBlockId() { return cookingBlockId; }
     public List<IngredientData> getIngredients() { return ingredients; }
-    public boolean isWithBowl() { return withBowl; }
+    public String getContainerId(){return containerId;}
 
     /**
      * 原料数据类

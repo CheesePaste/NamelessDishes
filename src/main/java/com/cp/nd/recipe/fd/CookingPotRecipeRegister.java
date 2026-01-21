@@ -5,6 +5,7 @@ import com.cp.nd.api.INamelessDishRecipeRegister;
 import com.cp.nd.util.RecipeUtil;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
@@ -83,8 +84,7 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
             return null;
         }
 
-        ItemStack container = AbstractNamelessDishItem.hasBowl(namelessDish) ?
-                new ItemStack(net.minecraft.world.item.Items.BOWL) : ItemStack.EMPTY;
+        ItemStack container = ((AbstractNamelessDishItem)namelessDish.getItem()).getContainerItem();
         int cookTime = ingredients.size() * 100;
 
         LOGGER.debug("Creating Cooking Pot recipe: {} with {} ingredients",
@@ -132,10 +132,6 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
         // 添加原料数量的哈希
         ingredientHash.append(ingredients.size());
 
-        // 添加容器信息
-        if (AbstractNamelessDishItem.hasBowl(namelessDish)) {
-            ingredientHash.append(":with_bowl");
-        }
 
         // 生成UUID哈希以确保ID长度合适
         String hash = UUID.nameUUIDFromBytes(ingredientHash.toString().getBytes()).toString();

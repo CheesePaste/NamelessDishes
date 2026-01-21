@@ -4,6 +4,7 @@ import com.cp.nd.NamelessDishes;
 import com.cp.nd.compatibility.fd.FarmersDelightHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -83,7 +84,7 @@ public abstract class CookingPotBlockEntityMixin {
         if(accessor.farmersdelight$getCookTime()> accessor.farmersdelight$getCookTimeTotal())
         {
             // 创建无名料理
-            ItemStack namelessResult = createNamelessResult(cookingPot, inputs,true);
+            ItemStack namelessResult = createNamelessResult(cookingPot, inputs,Items.BOWL.toString());
             if (namelessResult.isEmpty()) {
                 //这个if里面基本不可能触发，不用考虑是这里卡住
                 return;

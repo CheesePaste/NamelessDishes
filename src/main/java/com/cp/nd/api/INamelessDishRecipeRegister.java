@@ -21,7 +21,6 @@ public interface INamelessDishRecipeRegister {
      * @return 是否支持
      */
     boolean isSupport(String cookingBlockId);
-
     /**
      * 获取注册器名称（用于日志）
      * @return 注册器名称
