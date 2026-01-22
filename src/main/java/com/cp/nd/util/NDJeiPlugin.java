@@ -1,4 +1,4 @@
-package com.cp.nd.util;
+/*package com.cp.nd.util;
 
 import com.cp.nd.NamelessDishes;
 import mezz.jei.api.IModPlugin;
@@ -28,4 +28,4 @@ public class NDJeiPlugin implements IModPlugin {
         // JEI运行时不可用时（如玩家关闭了JEI界面）
         jeiRuntime = null;
     }
-}
+}*/

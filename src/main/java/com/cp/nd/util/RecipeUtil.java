@@ -212,12 +212,12 @@ public class RecipeUtil {
                     // 继续执行后面的逻辑
                 case SHOW:
                     updatePlayerRecipeBook(recipe, true);
-                    updateJEI(recipe, jeiType, false);
+                    //updateJEI(recipe, jeiType, false);
                     return true;
 
                 case HIDE:
                     updatePlayerRecipeBook(recipe, false);
-                    updateJEI(recipe, jeiType, true);
+                    //updateJEI(recipe, jeiType, true);
                     return true;
 
                 default:
@@ -252,12 +252,12 @@ public class RecipeUtil {
                     // 继续执行后面的逻辑
                 case SHOW:
                     updatePlayerRecipeBook(recipeList, true);
-                    updateJEI(objectList, jeiType, recipeList.get(0).getType(), false);
+                    //updateJEI(objectList, jeiType, recipeList.get(0).getType(), false);
                     break;
 
                 case HIDE:
                     updatePlayerRecipeBook(recipeList, false);
-                    updateJEI(objectList, jeiType, recipeList.get(0).getType(), true);
+                    //updateJEI(objectList, jeiType, recipeList.get(0).getType(), true);
                     break;
 
                 default:
@@ -396,8 +396,8 @@ public class RecipeUtil {
     /**
      * 更新JEI显示
      */
-    @SuppressWarnings("all")
-    private static void updateJEI(Recipe<?> recipe, RecipeType<Object> jeiType, boolean hide) {
+    //@SuppressWarnings("all")
+    /* static void updateJEI(Recipe<?> recipe, RecipeType<Object> jeiType, boolean hide) {
         IJeiRuntime runtime = getJeiRuntime();
         if (runtime == null) return;
 
@@ -423,13 +423,13 @@ public class RecipeUtil {
             System.err.println("更新JEI失败: " + e.getMessage());
             e.printStackTrace();
         }
-    }
+    }*/
 
     /**
      * 批量更新JEI显示
      */
     @SuppressWarnings("all")
-    private static void updateJEI(List<Object> recipes, RecipeType<Object> jeiType,
+    /*private static void updateJEI(List<Object> recipes, RecipeType<Object> jeiType,
                                   Object recipeType, boolean hide) {
         IJeiRuntime runtime = getJeiRuntime();
         if (runtime == null) return;
@@ -456,7 +456,7 @@ public class RecipeUtil {
             System.err.println("批量更新JEI失败: " + e.getMessage());
             e.printStackTrace();
         }
-    }
+    }*/
 
     /**
      * 重新构建客户端配方书分类集合
@@ -471,9 +471,9 @@ public class RecipeUtil {
     /**
      * 获取JEI运行时
      */
-    private static IJeiRuntime getJeiRuntime() {
+    /*private static IJeiRuntime getJeiRuntime() {
         return NDJeiPlugin.jeiRuntime;
-    }
+    }*/
 
     /**
      * 获取服务器RecipeManager

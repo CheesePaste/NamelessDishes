@@ -12,7 +12,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -31,18 +30,18 @@ import java.util.Optional;
 import static com.cp.nd.util.FoodUtil.allowNamelessCrafting;
 import static com.cp.nd.util.FoodUtil.createNamelessResult;
 
-//注意，mixin一定要加入remap=false
-@Mixin(CookingPotBlockEntity.class)
+
+@Mixin(value = CookingPotBlockEntity.class)
 public abstract class CookingPotBlockEntityMixin {
     @Unique
-    private final static String modName="farmersdelight";
+    private final static String namelessDishes$modName ="farmersdelight";
     @Unique
-    private final static String cookingBlockName="farmersdelight:cooking_pot";
+    private final static String namelessDishes$cookingBlockName ="farmersdelight:cooking_pot";
     @Unique
     private final static int namelessDishes$cooktime =100;
 
     @Inject(
-            method = "cookingTick(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lvectorwing/farmersdelight/common/block/entity/CookingPotBlockEntity;)V",
+            method = "cookingTick",
             at = @At("HEAD"),
             cancellable = true,remap = false
     )
@@ -83,7 +82,7 @@ public abstract class CookingPotBlockEntityMixin {
         }
 
         // 检查是否允许创建无名料理
-        if (!allowNamelessCrafting(level, cookingPot, inputs,modName,cookingBlockName)) {
+        if (!allowNamelessCrafting(level, cookingPot, inputs, namelessDishes$modName, namelessDishes$cookingBlockName)) {
             return;
         }
         ci.cancel();
@@ -164,9 +163,9 @@ public abstract class CookingPotBlockEntityMixin {
      * 这个方法在每次配方成功使用时被调用
      */
     @Inject(
-            method = "setRecipeUsed",
+            method = "m_6029_",
             at = @At("HEAD"),
-            remap = false
+            remap = true
     )
     public void onSetRecipeUsed(Recipe<?> recipe, CallbackInfo ci) {
         if(RecipeUnlockManager.manager.lockContains(recipe)) {

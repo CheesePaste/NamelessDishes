@@ -18,9 +18,8 @@ import java.util.Map;
 
 @Mixin(RecipeManager.class)
 public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
-
     // 在RecipeManagerMixin.java中添加
-    @Inject(method = "replaceRecipes", at = @At("HEAD"))
+    @Inject(method = "m_44024_", at = @At("HEAD"))
     public void onReplaceRecipes(Iterable<Recipe<?>> recipes, CallbackInfo ci) {
         System.out.println("[MIXIN] RecipeManager.replaceRecipes被调用，配方列表被替换");
         namelessDishes$ensureMutable(); // 确保可变
@@ -98,7 +97,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerMixin {
     }
 
     // 为了兼容reload操作，我们需要在reload时重新确保可变性
-    @Inject(method = "apply", at = @At("HEAD"))
+    @Inject(method = "m_5787_", at = @At("HEAD"))
     private void onApplyHead(Map<ResourceLocation, com.google.gson.JsonElement> p_44037_,
                              net.minecraft.server.packs.resources.ResourceManager p_44038_,
                              net.minecraft.util.profiling.ProfilerFiller p_44039_,

@@ -36,6 +36,7 @@ repositories {
     }
 
     maven { url "https://maven.blamejared.com" }
+    maven { url = "https://jitpack.io" }
 }
 apply from: 'gradle/optional-dep.gradle'
 
