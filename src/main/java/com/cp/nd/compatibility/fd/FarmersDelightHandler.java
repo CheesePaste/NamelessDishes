@@ -1,23 +1,19 @@
 package com.cp.nd.compatibility.fd;
 
 import com.cp.nd.NamelessDishes;
-import com.cp.nd.config.NDConfig;
-import com.cp.nd.item.AbstractNamelessDishItem;
-import com.cp.nd.item.ModItems;
-import com.cp.nd.recipe.RecipeRegisterManager;
-import com.cp.nd.recipe.storage.NamelessDishRecipeData;
-import com.cp.nd.recipe.storage.RecipeStorageManager;
-import com.cp.nd.util.ModDetectionUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import vectorwing.farmersdelight.client.recipebook.CookingPotRecipeBookTab;
 import vectorwing.farmersdelight.common.block.entity.CookingPotBlockEntity;
+import vectorwing.farmersdelight.common.crafting.CookingPotRecipe;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +25,12 @@ public class FarmersDelightHandler {
     private static final int INPUT_SLOT_START = 0;
     private static final int INPUT_SLOT_END = 5;
 
+
+    @SuppressWarnings("all")
+    public Recipe<?> getStandardRecipe() {
+        return new CookingPotRecipe(new ResourceLocation("standard_recipe_cooking_pot"),                "nameless_dishes",
+                CookingPotRecipeBookTab.MISC, NonNullList.of(Ingredient.of(ItemStack.EMPTY)),ItemStack.EMPTY,ItemStack.EMPTY,0.0f,100);
+    }
 
 
 

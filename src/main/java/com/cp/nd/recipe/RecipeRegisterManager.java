@@ -94,6 +94,18 @@ public class RecipeRegisterManager {
             LOGGER.error("配方注册进游戏失败");
         }
     }
+    public List<INamelessDishRecipeRegister> getRegisters()
+    {
+        List<INamelessDishRecipeRegister> registers=dynamicRegisters;
+        for(INamelessDishRecipeRegister r : registerByBlockId.values())
+        {
+            if(!registers.contains(r))
+            {
+                registers.add(r);
+            }
+        }
+        return registers;
+    }
 
     /**
      * 注册默认的注册器

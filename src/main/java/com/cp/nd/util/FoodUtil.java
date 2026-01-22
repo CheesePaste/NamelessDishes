@@ -57,10 +57,6 @@ public class FoodUtil {
             }
         }
 
-
-        for(int i=0;i<100;i++) {
-            LOGGER.info(containerId);
-        }
         switch (containerId) {
             case "bowl":
             case"minecraft:bowl":

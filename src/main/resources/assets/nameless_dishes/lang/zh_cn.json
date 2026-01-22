@@ -2,5 +2,7 @@
   "item.nameless_dishes.nameless_dish": "无名料理（才不是黑暗料理呢）",
   "item.nameless_dishes.nameless_dish_with_bowl": "带碗的无名料理(才不是黑暗料理呢）",
   "tooltip.nameless_dishes.ingredients": "原料：",
-  "tooltip.nameless_dishes.cooked_in":"制作于：%s"
+  "tooltip.nameless_dishes.cooked_in":"制作于：%s",
+  "toast.nameless_dishes.recipe_unlocked": "新料理发现",
+  "toast.nameless_dishes.cooking_hint": "新料理提示"
 }

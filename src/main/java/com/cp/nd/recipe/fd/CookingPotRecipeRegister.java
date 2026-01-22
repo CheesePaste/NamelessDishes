@@ -60,6 +60,13 @@ public class CookingPotRecipeRegister implements INamelessDishRecipeRegister {
         }
     }
 
+    @Override
+    @SuppressWarnings("all")
+    public Recipe<?> getStandardRecipe() {
+        return new CookingPotRecipe(new ResourceLocation("standard_recipe_cooking_pot"),                "nameless_dishes",
+                CookingPotRecipeBookTab.MISC,NonNullList.of(Ingredient.of(ItemStack.EMPTY)),ItemStack.EMPTY,ItemStack.EMPTY,0.0f,100);
+    }
+
     /**
      * 将无名料理ItemStack转换为CookingPotRecipe
      *

@@ -49,6 +49,14 @@ public class RecipeUnlockManager {
     {
         return allRecipes.contains(r)&&!lockRecipes.contains(r);
     }
+    public boolean contains(Recipe<?> r)
+    {
+        return allRecipes.contains(r);
+    }
+    public boolean lockContains(Recipe<?> r)
+    {
+        return lockRecipes.contains(r);
+    }
     public void updateLock()
     {
         RecipeUtil.hide(lockRecipes);

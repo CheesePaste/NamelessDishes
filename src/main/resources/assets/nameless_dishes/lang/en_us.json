@@ -2,5 +2,7 @@
   "item.nameless_dishes.nameless_dish": "Nameless Dish",
   "item.nameless_dishes.nameless_dish_with_bowl": "Nameless Dish with Bowl",
   "tooltip.nameless_dishes.ingredients": "Ingredients:",
-  "tooltip.nameless_dishes.cooked_in":"Cooked in：%s"
+  "tooltip.nameless_dishes.cooked_in":"Cooked in：%s",
+  "toast.nameless_dishes.recipe_unlocked": "New Dish Explore",
+  "toast.nameless_dishes.cooking_hint": "New Dish Hint"
 }

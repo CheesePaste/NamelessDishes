@@ -2,11 +2,20 @@ package com.cp.nd.mixin.fd;
 
 import com.cp.nd.NamelessDishes;
 import com.cp.nd.compatibility.fd.FarmersDelightHandler;
+import com.cp.nd.gui.toast.RecipeToastManager;
+import com.cp.nd.network.CookingHintPacket;
+import com.cp.nd.network.NetworkHandler;
+import com.cp.nd.recipe.RecipeUnlockManager;
+import com.cp.nd.util.RecipeMatcher;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,6 +48,7 @@ public abstract class CookingPotBlockEntityMixin {
     )
     private static void onCookingTick(Level level, BlockPos pos, BlockState state,
                                       CookingPotBlockEntity cookingPot, CallbackInfo ci) {
+
         if (level.isClientSide()) {
             return;
         }
@@ -91,6 +101,39 @@ public abstract class CookingPotBlockEntityMixin {
             }
             //executeCooking负责在展示槽生成无名料理，展示槽是“需要碗”提示的那个槽
             boolean success = handler.executeCooking(level, cookingPot,namelessResult);
+            // 寻找最接近的配方
+            RecipeMatcher.MatchResult match = RecipeMatcher.findBestMatch(
+                    inputs,
+                    RecipeUnlockManager.manager.getLockRecipes(),
+                    handler.getStandardRecipe().getType()
+            );
+
+            // 如果有匹配的配方，显示Toast提示
+            if (match != null && match.recipe != null) {
+                // 向附近的玩家发送提示数据包
+                List<ServerPlayer> nearbyPlayers = level.getEntitiesOfClass(
+                        ServerPlayer.class,
+                        new AABB(pos).inflate(8.0) // 8格范围内的玩家
+                );
+
+                for (ServerPlayer player : nearbyPlayers) {
+                    // 创建数据包
+                    CookingHintPacket packet = new CookingHintPacket(
+                            match.recipe.getId(),
+                            match.hint,
+                            match.similarity,
+                            match.missingItems,
+                            match.extraItems,
+                            RecipeMatcher.determineHintType(match).name()
+                    );
+
+                    // 发送给客户端
+                    NetworkHandler.sendToClient(packet, player);
+                }
+
+                NamelessDishes.LOGGER.debug("Found close recipe match for failed cooking: {} (similarity: {})",
+                        match.recipe.getId(), match.similarity);
+            }
             if(success) {
                 accessor.farmersdelight$setCookTime(0);
                 accessor.farmersdelight$setCookTimeTotal(0);
@@ -114,5 +157,21 @@ public abstract class CookingPotBlockEntityMixin {
             level.sendBlockUpdated(pos, state, state, 3);
         }
 
+    }
+
+    /**
+     * 注入到 setRecipeUsed 方法中
+     * 这个方法在每次配方成功使用时被调用
+     */
+    @Inject(
+            method = "setRecipeUsed",
+            at = @At("HEAD"),
+            remap = false
+    )
+    public void onSetRecipeUsed(Recipe<?> recipe, CallbackInfo ci) {
+        if(RecipeUnlockManager.manager.lockContains(recipe)) {
+            RecipeUnlockManager.manager.unlock(recipe);
+            RecipeToastManager.showRecipeUnlockToast(recipe);
+        }
     }
 }

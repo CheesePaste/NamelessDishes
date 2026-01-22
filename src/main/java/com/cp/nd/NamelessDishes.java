@@ -2,6 +2,7 @@ package com.cp.nd;
 
 import com.cp.nd.config.NDConfig;
 import com.cp.nd.item.ModItems;
+import com.cp.nd.network.NetworkHandler;
 import com.cp.nd.recipe.RecipeRegisterManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -43,6 +44,7 @@ public class NamelessDishes {
 
         // 初始化管理器
         manager.initialize(event);
+        NetworkHandler.register();
         LOGGER.info("Nameless Dishes 框架初始化...");
     }
 
