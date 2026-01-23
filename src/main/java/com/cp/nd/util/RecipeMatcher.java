@@ -52,7 +52,7 @@ public class RecipeMatcher {
     }
 
     /**
-     * 计算两个物品列表的相似度（改进版Jaccard系数）
+     * 计算两个物品列表的相似度（不考虑标签）
      */
     public static float calculateSimilarity(List<ItemStack> inputItems, List<Ingredient> recipeIngredients) {
         if (inputItems.isEmpty() && recipeIngredients.isEmpty()) return 1.0f;
@@ -62,58 +62,49 @@ public class RecipeMatcher {
         Map<String, Integer> inputCounts = new HashMap<>();
         for (ItemStack stack : inputItems) {
             if (!stack.isEmpty()) {
+                // 使用物品注册名作为唯一标识，不包括NBT
                 String itemId = stack.getItem().toString();
                 inputCounts.put(itemId, inputCounts.getOrDefault(itemId, 0) + stack.getCount());
             }
         }
 
-        // 规范化配方材料（考虑标签）
-        Map<String, Set<String>> ingredientOptions = new HashMap<>();
-        for (Ingredient ingredient : recipeIngredients) {
-            Set<String> options = new HashSet<>();
-            for (ItemStack item : ingredient.getItems()) {
-                if (!item.isEmpty()) {
-                    options.add(item.getItem().toString());
-                }
-            }
-            ingredientOptions.put("ingredient_" + ingredient.hashCode(), options);
-        }
-
-        // 计算匹配分数
-        int matches = 0;
-        int total = recipeIngredients.size();
-
         // 复制输入用于匹配
         Map<String, Integer> remainingInputs = new HashMap<>(inputCounts);
+        int matches = 0;
 
-        for (Set<String> options : ingredientOptions.values()) {
+        // 遍历配方材料
+        for (Ingredient ingredient : recipeIngredients) {
+            ItemStack[] ingredientItems = ingredient.getItems();
+
+            // 如果没有具体的物品选项，跳过这个材料
+            if (ingredientItems.length == 0) {
+                continue;
+            }
+
             boolean matched = false;
-            // 尝试匹配每个选项
-            for (String option : options) {
-                if (option.startsWith("tag:")) {
-                    // 标签匹配简化：如果输入中有任何物品属于该标签，则匹配
-                    // 这里简化处理，实际需要检查标签
-                    for (String inputItem : remainingInputs.keySet()) {
-                        // 假设一个占位符匹配
-                        if (remainingInputs.get(inputItem) > 0) {
-                            matched = true;
-                            remainingInputs.put(inputItem, remainingInputs.get(inputItem) - 1);
-                            break;
-                        }
+
+            // 尝试匹配每个具体的物品选项
+            for (ItemStack option : ingredientItems) {
+                if (!option.isEmpty()) {
+                    String optionId = option.getItem().toString();
+
+                    // 检查是否有匹配的物品
+                    if (remainingInputs.containsKey(optionId) && remainingInputs.get(optionId) > 0) {
+                        matched = true;
+                        // 消耗一个物品
+                        remainingInputs.put(optionId, remainingInputs.get(optionId) - 1);
+                        break;
                     }
-                } else if (remainingInputs.containsKey(option) && remainingInputs.get(option) > 0) {
-                    matched = true;
-                    remainingInputs.put(option, remainingInputs.get(option) - 1);
-                    break;
                 }
             }
+
             if (matched) {
                 matches++;
             }
         }
 
         // 计算相似度
-        float ingredientSimilarity = (float) matches / total;
+        float ingredientSimilarity = (float) matches / recipeIngredients.size();
 
         // 考虑数量比例
         int totalInputCount = inputItems.stream()
@@ -127,6 +118,7 @@ public class RecipeMatcher {
         // 加权综合相似度
         return ingredientSimilarity * 0.7f + countSimilarity * 0.3f;
     }
+
 
     /**
      * 找到最佳匹配的配方

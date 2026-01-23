@@ -163,7 +163,7 @@ public abstract class CookingPotBlockEntityMixin {
      * 这个方法在每次配方成功使用时被调用
      */
     @Inject(
-            method = "m_6029_",
+            method = "setRecipeUsed",
             at = @At("HEAD"),
             remap = true
     )
@@ -173,4 +173,21 @@ public abstract class CookingPotBlockEntityMixin {
             RecipeToastManager.showRecipeUnlockToast(recipe);
         }
     }
+
+    /**
+     * 注入到 setRecipeUsed 方法中
+     * 这个方法在每次配方成功使用时被调用
+     */
+
+    /*@Inject(
+            method = "m_6029_",
+            at = @At("HEAD"),
+            remap = true
+    )
+    public void onSetRecipeUsed(Recipe<?> recipe, CallbackInfo ci) {
+        if(RecipeUnlockManager.manager.lockContains(recipe)) {
+            RecipeUnlockManager.manager.unlock(recipe);
+            RecipeToastManager.showRecipeUnlockToast(recipe);
+        }
+    }*/
 }
